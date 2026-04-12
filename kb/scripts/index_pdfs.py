@@ -722,7 +722,7 @@ def main():
         print("  Supports: .pdf (with OCR fallback), .jpg, .png, .gif, .bmp, .webp, .tiff")
         sys.exit(1)
     
-    db_path = Path(__file__).parent.parent / "knowledge.db"
+    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
     
     with BiblioIndexer(str(db_path)) as indexer:
         pdf_indexer = PDFIndexer(indexer)

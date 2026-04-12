@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 def get_stats():
     """Hole aktuelle Statistiken."""
-    db_path = Path.home() / "knowledge" / "knowledge.db"
-    chroma_path = Path.home() / ".knowledge" / "chroma_db"
+    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
+    chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
     
     # SQLite Count
     import sqlite3
@@ -74,8 +74,8 @@ def reembed_all(limit=None, batch_size=64):
         limit: Optional limit for testing
         batch_size: Batch size for embedding
     """
-    db_path = Path.home() / "knowledge" / "knowledge.db"
-    chroma_path = Path.home() / ".knowledge" / "chroma_db"
+    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
+    chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
     
     logger.info("=" * 60)
     logger.info("Batch Re-Embedding - Alle Sections")

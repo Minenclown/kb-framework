@@ -7,7 +7,7 @@ Zweck: Erste Query nicht 8s langsam
 """
 
 import sys
-sys.path.insert(0, '/home/lumen/knowledge/library')
+sys.path.insert(0, str(Path.home() / ".openclaw" / "kb" / "library"))
 
 from knowledge_base.chroma_integration import ChromaIntegration
 

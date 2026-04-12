@@ -5,9 +5,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKUP_DIR="${BACKUP_DIR:-$HOME/knowledge/backup}"
-KB_DB="${KB_DB:-$HOME/knowledge/knowledge.db}"
-CHROMA_DB="${CHROMA_DB:-$HOME/.knowledge/chroma_db}"
+BACKUP_DIR="${BACKUP_DIR:-$HOME/.openclaw/kb/backup}"
+KB_DB="${KB_DB:-$HOME/.openclaw/kb/library/biblio.db}"
+CHROMA_DB="${CHROMA_DB:-$HOME/.openclaw/kb/.knowledge/chroma_db}"
 
 # Konfiguration
 RETENTION_DAYS="${RETENTION_DAYS:-7}"

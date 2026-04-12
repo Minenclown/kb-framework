@@ -13,7 +13,7 @@ from datetime import datetime
 import csv
 
 # Konfiguration
-DB_PATH = Path.home() / "knowledge" / "knowledge.db"
+DB_PATH = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
 LIBRARY_PATH = Path.home() / "knowledge" / "library"
 OUTPUT_DIR = Path.home() / "knowledge" / "library" / "audit"
 OUTPUT_ORPHANED = OUTPUT_DIR / "orphaned_entries.csv"
