@@ -5,7 +5,7 @@ Parses Obsidian vault files: WikiLinks, Tags, Frontmatter, Embeds.
 Resolves wiki links to file paths using shortest-match algorithm.
 """
 
-from kb.obsidian.parser import (
+from .parser import (
     WIKILINK_PATTERN,
     EMBED_PATTERN,
     TAG_PATTERN,
@@ -16,12 +16,14 @@ from kb.obsidian.parser import (
     extract_embeds,
 )
 
-from kb.obsidian.resolver import (
+from .vault import ObsidianVault
+
+from .resolver import (
     PathResolver,
     resolve_wikilink,
 )
 
-from kb.obsidian.writer import (
+from .writer import (
     VaultWriter,
     create_note,
     update_frontmatter,
@@ -44,4 +46,6 @@ __all__ = [
     'VaultWriter',
     'create_note',
     'update_frontmatter',
+    # Vault
+    'ObsidianVault',
 ]

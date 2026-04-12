@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
-from kb.obsidian.parser import parse_frontmatter, extract_wikilinks, WIKILINK_PATTERN
+from .parser import parse_frontmatter, extract_wikilinks, WIKILINK_PATTERN
 
 
 # =============================================================================

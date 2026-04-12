@@ -11,8 +11,8 @@ from typing import Optional
 import sys
 
 # Import from Phase 1 and Phase 2
-from kb.obsidian.parser import extract_wikilinks, parse_frontmatter, extract_context
-from kb.obsidian.resolver import PathResolver
+from .parser import extract_wikilinks, parse_frontmatter, extract_context
+from .resolver import PathResolver
 
 
 # =============================================================================

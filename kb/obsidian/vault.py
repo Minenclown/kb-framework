@@ -9,16 +9,16 @@ from pathlib import Path
 from typing import Optional
 import sys
 
-from kb.obsidian.parser import (
+from .parser import (
     parse_frontmatter,
     extract_wikilinks,
     extract_tags,
     extract_embeds,
     extract_context,
 )
-from kb.obsidian.resolver import PathResolver
-from kb.obsidian.indexer import BacklinkIndexer
-from kb.obsidian.writer import VaultWriter
+from .resolver import PathResolver
+from .indexer import BacklinkIndexer
+from .writer import VaultWriter
 
 
 # =============================================================================
