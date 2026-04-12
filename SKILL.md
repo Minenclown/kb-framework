@@ -175,6 +175,48 @@ GPU_ENABLED = True  # Standard: False
 
 ---
 
+## Library Struktur (WICHTIG)
+
+### content/ - Rohdateien
+Alle nicht-Markdown Dateien:
+```
+library/content/
+├── Gesundheit/           # PDFs, Studien
+├── Medizin_Studien/      # Medizinische Literatur
+├── Bücher/              # Bücher, Guides
+├── Sonstiges/           # Uncategorized
+└── [kategorie]/          # Eigene Kategorien möglich
+```
+
+### agent/ - Markdown Dateien
+Alle .md Dateien für Agenten:
+```
+library/agent/
+├── projektplanung/      # Agent-Pläne
+├── memory/              # Tägliche Logs
+├── Workflow_Referenzen/ # Wiederverwendbare Workflows
+├── agents/             # Agent-spezifische Docs
+└── [kategorie]/        # Eigene Kategorien möglich
+```
+
+### Neue Dateien integrieren
+
+**Regel:** `library/[content|agent]/[kategorie]/[thema]/[datei]`
+
+Beispiele:
+```bash
+# Neues Gesundheits-PDF
+library/content/Gesundheit/2026/Chelat-Therapie.pdf
+
+# Neuer Agent-Plan
+library/agent/projektplanung/Treechat_Upgrade.md
+
+# Neues Learning
+library/agent/learnings/2026-04-12_Git_Workflow.md
+```
+
+---
+
 ## Lizenz
 
 MIT License - frei nutzbar.
