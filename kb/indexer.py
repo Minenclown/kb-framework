@@ -2,6 +2,8 @@
 """
 MarkdownIndexer - Indiziert Markdown-Dateien nach Header-Struktur.
 Phase 1 der Suchmaschinen-Implementierung.
+
+Plugin-System: IndexingPlugin ABC ermöglicht flexible ChromaDB-Integration.
 """
 
 import hashlib
@@ -11,6 +13,7 @@ import re
 import shutil
 import sqlite3
 import uuid
+from abc import ABC, abstractmethod
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +24,52 @@ logger = logging.getLogger(__name__)
 
 # Konstanten
 MAX_CONTENT_LENGTH = 200  # Preview-Länge
+
+
+class IndexingPlugin(ABC):
+    """
+    Abstract Base Class für Indexing-Plugins.
+    
+    Plugins werden nach erfolgreicher Indexierung einer Datei aufgerufen
+    und ermöglichen flexible Post-Processing-Aktionen (z.B. ChromaDB-Embedding).
+    
+    Example:
+        class ChromaDBPlugin(IndexingPlugin):
+            def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
+                # Queue für Background-Embedding
+                pass
+    """
+    
+    @abstractmethod
+    def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
+        """
+        Callback nach erfolgreicher Indexierung einer Datei.
+        
+        Args:
+            file_path: Pfad zur indizierten Datei
+            sections: Anzahl der indizierten Abschnitte
+            file_id: UUID der Datei in der Datenbank
+        """
+        pass
+    
+    @abstractmethod
+    def on_file_removed(self, file_path: Path) -> None:
+        """
+        Callback nach Entfernung einer Datei aus dem Index.
+        
+        Args:
+            file_path: Pfad der entfernten Datei
+        """
+        pass
+    
+    def on_indexing_complete(self, stats: dict) -> None:
+        """
+        Optionaler Callback nach vollständiger Indizierung (index_directory, check_and_update).
+        
+        Args:
+            stats: Statistik-Dict mit 'files' und 'sections' Zählern
+        """
+        pass
 
 
 class MarkdownIndexer:
@@ -187,28 +236,32 @@ class MarkdownIndexer:
 
 class BiblioIndexer:
     """
-    Vollständiger Indexer mit Datenbank-Anbindung.
-
+    Vollständiger Indexer mit Datenbank-Anbindung und Plugin-System.
+    
     Unterstützt Context-Manager-Protokoll für automatisches Schließen.
+    
+    Plugin-System ermöglicht flexible Post-Processing-Aktionen wie ChromaDB-Embedding.
 
     Example:
-        with BiblioIndexer("knowledge.db") as indexer:
+        with BiblioIndexer("knowledge.db", plugins=[ChromaDBPlugin()]) as indexer:
             indexer.index_file("test.md")
-        # Verbindung wird automatisch geschlossen
+        # → SQLite + ChromaDB (automatic via plugin)
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, plugins: List[IndexingPlugin] = None):
         """
         Initialisiere BiblioIndexer mit Datenbank-Verbindung.
 
         Args:
             db_path: Pfad zur SQLite-Datenbank
+            plugins: Optional list of IndexingPlugin instances
 
         Raises:
             FileNotFoundError: Wenn das Datenbank-Verzeichnis nicht existiert
             sqlite3.Error: Bei Datenbank-Verbindungsfehlern
         """
         self.db_path = db_path
+        self.plugins = plugins or []
 
         # Validierung: Datenbank-Verzeichnis muss existieren
         db_dir = Path(db_path).parent
@@ -267,6 +320,14 @@ class BiblioIndexer:
             )
             self.conn.commit()
             logger.info(f"🗑️  Entfernt: {file_path}")
+            
+            # Plugin-Callbacks
+            for plugin in self.plugins:
+                try:
+                    plugin.on_file_removed(Path(file_path))
+                except Exception as e:
+                    logger.warning(f"Plugin {plugin.__class__.__name__} on_file_removed failed: {e}")
+            
             return True
         except Exception as e:
             logger.error(f"⚠️  Fehler beim Entfernen: {e}")
@@ -405,6 +466,14 @@ class BiblioIndexer:
 
         self.conn.commit()
         logger.info(f"✅ {file_path.name}: {len(sections)} Abschnitte")
+        
+        # Plugin-Callbacks nach erfolgreicher Indexierung
+        for plugin in self.plugins:
+            try:
+                plugin.on_file_indexed(Path(file_path), len(sections), file_id)
+            except Exception as e:
+                logger.warning(f"Plugin {plugin.__class__.__name__} on_file_indexed failed: {e}")
+        
         return len(sections)
 
     def index_directory(self, dir_path: str, recursive: bool = True) -> dict:
@@ -433,6 +502,14 @@ class BiblioIndexer:
             if sections > 0:
                 stats['files'] += 1
                 stats['sections'] += sections
+
+        # Plugin-Callbacks nach abgeschlossener Indexierung
+        for plugin in self.plugins:
+            try:
+                if hasattr(plugin, 'on_indexing_complete'):
+                    plugin.on_indexing_complete(stats)
+            except Exception as e:
+                logger.warning(f"Plugin {plugin.__class__.__name__} on_indexing_complete failed: {e}")
 
         return stats
 
@@ -522,6 +599,15 @@ class BiblioIndexer:
 
         logger.info(f"📊 Delta-Index: {stats['files_updated']} aktualisiert, "
                    f"{stats['files_removed']} entfernt, {stats['sections']} Abschnitte")
+        
+        # Plugin-Callbacks nach abgeschlossener Delta-Indexierung
+        for plugin in self.plugins:
+            try:
+                if hasattr(plugin, 'on_indexing_complete'):
+                    plugin.on_indexing_complete(stats)
+            except Exception as e:
+                logger.warning(f"Plugin {plugin.__class__.__name__} on_indexing_complete failed: {e}")
+        
         return stats
 
     def index_unindexed(self, unindexed_dir: str = "unindexed") -> dict:

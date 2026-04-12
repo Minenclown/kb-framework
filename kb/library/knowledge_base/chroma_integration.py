@@ -205,6 +205,41 @@ class ChromaIntegration:
             "metadata": collection.metadata
         }
     
+    def delete_by_file_id(self, file_id: str, collection_name: str = "kb_sections") -> int:
+        """
+        Löscht alle Embeddings für eine file_id aus ChromaDB.
+        
+        ChromaDB unterstützt kein DELETE mit WHERE - daher:
+        1. Query alle IDs mit passender file_id via Metadaten
+        2. Lösche via delete_by_ids()
+        
+        Args:
+            file_id: UUID der Datei
+            collection_name: ChromaDB Collection Name
+            
+        Returns:
+            Anzahl der gelöschten Einträge
+        """
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            
+            # Query alle IDs mit passender file_id in Metadaten
+            results = collection.get(where={"file_id": file_id})
+            
+            if not results or not results.get('ids'):
+                logger.debug(f"No ChromaDB entries found for file_id: {file_id}")
+                return 0
+            
+            ids_to_delete = results['ids']
+            collection.delete(ids=ids_to_delete)
+            
+            logger.info(f"Deleted {len(ids_to_delete)} entries from ChromaDB for file_id: {file_id}")
+            return len(ids_to_delete)
+            
+        except Exception as e:
+            logger.error(f"Error deleting from ChromaDB for file_id {file_id}: {e}")
+            return 0
+    
     def list_collections(self) -> list[dict]:
         """Liste aller Collections mit Statistiken."""
         collections = self.client.list_collections()

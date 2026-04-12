@@ -1,0 +1,431 @@
+"""
+ChromaDB Plugin für BiblioIndexer
+==================================
+
+Plugin-System für automatische ChromaDB-Integration nach Indexierung.
+
+Nutzt Background-Queue für non-blocking Embedding.
+
+Usage:
+    from kb.indexer import BiblioIndexer
+    from kb.library.knowledge_base.chroma_plugin import ChromaDBPlugin
+    
+    with BiblioIndexer("knowledge.db", plugins=[ChromaDBPlugin()]) as indexer:
+        indexer.index_file(Path("test.md"))
+        # → SQLite + ChromaDB (automatic via plugin)
+"""
+
+import json
+import logging
+import sqlite3
+import threading
+from pathlib import Path
+from typing import List, Optional, Set
+from queue import Queue, Empty
+from dataclasses import dataclass, field
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EmbeddingTask:
+    """Ein zu verarbeitender Embedding-Task."""
+    section_id: str
+    file_id: str
+    file_path: str
+    section_header: str
+    content_full: str
+    content_preview: str
+    section_level: int
+    keywords: List[str] = field(default_factory=list)
+
+
+class ChromaDBPlugin:
+    """
+    ChromaDB-Embedding Plugin für BiblioIndexer.
+    
+    Responsibility:
+    - Queue verwaltet frisch indexierte Sections für Embedding
+    - Background-Thread für non-blocking Verarbeitung
+    - Batch-Processing für Effizienz
+    
+    Features:
+    - Non-blocking: Indexierung wird nicht durch Embedding blockiert
+    - Batch-Processing: Sections werden in Batches verarbeitet
+    - Toggle: kann ein/ausgeschaltet werden
+    - Graceful: funktioniert auch wenn ChromaDB nicht verfügbar
+    """
+    
+    def __init__(
+        self,
+        db_path: str = "~/.knowledge/knowledge.db",
+        chroma_path: str = "~/.knowledge/chroma_db",
+        batch_size: int = 32,
+        enabled: bool = True,
+        auto_flush: bool = True,
+        collection_name: str = "kb_sections"
+    ):
+        """
+        Initialize ChromaDB Plugin.
+        
+        Args:
+            db_path: Pfad zur SQLite-Datenbank
+            chroma_path: Pfad für ChromaDB
+            batch_size: Batch-Größe für Embedding
+            enabled: Ob Plugin aktiv ist
+            auto_flush: Automatisch flushen nach index_directory
+            collection_name: ChromaDB Collection Name
+        """
+        self.db_path = Path(db_path).expanduser()
+        self.chroma_path = Path(chroma_path).expanduser()
+        self.batch_size = batch_size
+        self.enabled = enabled
+        self.auto_flush = auto_flush
+        self.collection_name = collection_name
+        
+        # Queue für Background-Embedding
+        self._queue: List[EmbeddingTask] = []
+        self._processed_files: Set[str] = set()  # file_ids already queued
+        
+        # Thread-safety
+        self._lock = threading.Lock()
+        
+        # Background thread
+        self._bg_thread: Optional[threading.Thread] = None
+        self._bg_running = False
+        
+        # Lazy-loaded components
+        self._chroma = None
+        self._pipeline = None
+        
+        logger.info(f"ChromaDBPlugin init: enabled={enabled}, batch_size={batch_size}")
+    
+    @property
+    def chroma(self):
+        """Lazy-load ChromaDB integration."""
+        if self._chroma is None:
+            try:
+                from kb.library.knowledge_base.chroma_integration import ChromaIntegration
+                self._chroma = ChromaIntegration(chroma_path=str(self.chroma_path))
+                logger.info("ChromaDB connection established")
+            except Exception as e:
+                logger.warning(f"ChromaDB not available: {e}")
+                self._chroma = None
+        return self._chroma
+    
+    @property
+    def pipeline(self):
+        """Lazy-load EmbeddingPipeline."""
+        if self._pipeline is None:
+            try:
+                from kb.library.knowledge_base.embedding_pipeline import EmbeddingPipeline
+                self._pipeline = EmbeddingPipeline(
+                    db_path=str(self.db_path),
+                    chroma_path=str(self.chroma_path),
+                    batch_size=self.batch_size
+                )
+                logger.info("EmbeddingPipeline initialized")
+            except Exception as e:
+                logger.warning(f"EmbeddingPipeline not available: {e}")
+                self._pipeline = None
+        return self._pipeline
+    
+    def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
+        """
+        Callback nach erfolgreicher Indexierung einer Datei.
+        
+        Queued alle Sections der Datei für späteres Embedding.
+        
+        Args:
+            file_path: Pfad zur indizierten Datei
+            sections: Anzahl der indizierten Abschnitte
+            file_id: UUID der Datei in der Datenbank
+        """
+        if not self.enabled:
+            return
+        
+        if file_id in self._processed_files:
+            logger.debug(f"File {file_id} already queued, skipping")
+            return
+        
+        try:
+            # Hole alle section_ids für diese file_id
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                
+                rows = conn.execute("""
+                    SELECT 
+                        id, file_id, file_path, section_header,
+                        content_full, content_preview, section_level,
+                        keywords
+                    FROM file_sections
+                    WHERE file_id = ?
+                """, (file_id,)).fetchall()
+            
+            if not rows:
+                logger.debug(f"No sections found for file_id {file_id}")
+                return
+            
+            with self._lock:
+                for row in rows:
+                    # Parse keywords
+                    keywords = []
+                    if row['keywords']:
+                        try:
+                            keywords = json.loads(row['keywords'])
+                        except Exception:
+                            keywords = []
+                    
+                    task = EmbeddingTask(
+                        section_id=row['id'],
+                        file_id=row['file_id'],
+                        file_path=row['file_path'],
+                        section_header=row['section_header'] or "",
+                        content_full=row['content_full'] or "",
+                        content_preview=row['content_preview'] or "",
+                        section_level=row['section_level'] or 0,
+                        keywords=keywords
+                    )
+                    self._queue.append(task)
+                
+                self._processed_files.add(file_id)
+            
+            logger.info(f"Queued {len(rows)} sections for embedding: {file_path.name}")
+            
+        except Exception as e:
+            logger.error(f"Error queuing sections for {file_path}: {e}")
+    
+    def on_file_removed(self, file_path: Path) -> None:
+        """
+        Callback nach Entfernung einer Datei aus dem Index.
+        
+        Entfernt zugehörige Entries aus ChromaDB.
+        
+        Args:
+            file_path: Pfad der entfernten Datei
+        """
+        if not self.enabled:
+            return
+        
+        try:
+            # Hole alle file_ids für diesen Pfad
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    "SELECT id FROM files WHERE file_path = ?", (str(file_path),)
+                ).fetchall()
+            
+            if not rows:
+                logger.debug(f"No file entries found for: {file_path}")
+                return
+            
+            file_ids = [row['id'] for row in rows]
+            
+            # Lösche aus ChromaDB
+            if self.chroma:
+                for file_id in file_ids:
+                    self.chroma.delete_by_file_id(file_id)
+                logger.info(f"ChromaDB entries removed for: {file_path}")
+            else:
+                logger.warning("ChromaDB not available, orphan entries may remain")
+                
+        except Exception as e:
+            logger.error(f"Error removing ChromaDB entries for {file_path}: {e}")
+    
+    def on_indexing_complete(self, stats: dict) -> None:
+        """
+        Optionaler Callback nach vollständiger Indizierung.
+        
+        Args:
+            stats: Statistik-Dict mit 'files' und 'sections' Zählern
+        """
+        if not self.enabled:
+            return
+        
+        if self.auto_flush and stats.get('sections', 0) > 0:
+            logger.info(f"Indexing complete: {stats['sections']} sections queued")
+            # Non-blocking background flush
+            self.flush_async()
+    
+    def flush(self) -> int:
+        """
+        Verarbeitet die Queue und schreibt nach ChromaDB.
+        
+        Blocking-Methode - sollte nicht im Haupt-Thread bei vielen Items aufgerufen werden.
+        
+        Returns:
+            Anzahl verarbeiteter Sections
+        """
+        if not self.enabled:
+            return 0
+        
+        if not self.chroma or not self.pipeline:
+            logger.warning("ChromaDB or Pipeline not available, skipping flush")
+            return 0
+        
+        with self._lock:
+            if not self._queue:
+                logger.debug("Queue empty, nothing to flush")
+                return 0
+            
+            # Copy queue and clear
+            tasks = self._queue.copy()
+            self._queue.clear()
+        
+        if not tasks:
+            return 0
+        
+        logger.info(f"Flushing {len(tasks)} sections to ChromaDB...")
+        
+        # Process in batches
+        processed = 0
+        failed = 0
+        
+        for i in range(0, len(tasks), self.batch_size):
+            batch = tasks[i:i + self.batch_size]
+            
+            try:
+                # Build texts for embedding
+                texts = []
+                for task in batch:
+                    text = self._build_embedding_text(
+                        task.section_header,
+                        task.content_full,
+                        task.keywords
+                    )
+                    texts.append(text)
+                
+                # Batch embedding
+                embeddings = self.chroma.embed_batch(texts, batch_size=len(batch))
+                
+                # Prepare ChromaDB upsert
+                collection = self.chroma.get_or_create_collection(
+                    name=self.collection_name,
+                    metadata={
+                        "description": "Knowledge Base Sections Embeddings",
+                        "source": "chroma_plugin.py"
+                    }
+                )
+                
+                ids = []
+                emb_list = []
+                metadatas = []
+                documents = []
+                
+                for idx, (task, embedding) in enumerate(zip(batch, embeddings)):
+                    ids.append(task.section_id)
+                    emb_list.append(embedding)
+                    metadatas.append({
+                        "file_id": task.file_id,
+                        "file_path": task.file_path,
+                        "section_header": task.section_header[:200] if task.section_header else "",
+                        "section_level": task.section_level,
+                        "keywords": json.dumps(task.keywords[:10]),
+                        "processed_at": datetime.now().isoformat()
+                    })
+                    documents.append(texts[idx][:2000])
+                
+                # Upsert to ChromaDB
+                collection.upsert(
+                    ids=ids,
+                    embeddings=emb_list,
+                    metadatas=metadatas,
+                    documents=documents
+                )
+                
+                processed += len(batch)
+                logger.info(f"Batch {i // self.batch_size + 1}: {len(batch)} sections embedded")
+                
+            except Exception as e:
+                logger.error(f"Batch embedding failed: {e}")
+                failed += len(batch)
+        
+        logger.info(f"Flush complete: {processed} processed, {failed} failed")
+        return processed
+    
+    def flush_async(self) -> None:
+        """
+        Startet Background-Thread für non-blocking flush.
+        
+        Non-blocking wichtig damit Indexing nicht blockiert wird.
+        """
+        if self._bg_thread and self._bg_thread.is_alive():
+            logger.debug("Background flush already running")
+            return
+        
+        self._bg_running = True
+        self._bg_thread = threading.Thread(
+            target=self._bg_flush_worker,
+            name="ChromaDB-Flush",
+            daemon=True
+        )
+        self._bg_thread.start()
+        logger.info("Background flush started")
+    
+    def _bg_flush_worker(self) -> None:
+        """Background worker für Flush."""
+        try:
+            self.flush()
+        except Exception as e:
+            logger.error(f"Background flush error: {e}")
+        finally:
+            self._bg_running = False
+    
+    def _build_embedding_text(
+        self,
+        header: str,
+        content: str,
+        keywords: List[str]
+    ) -> str:
+        """
+        Baut optimalen Text für Embedding.
+        
+        Structure:
+        - Header als Title (hohe Gewichtung durch Repetition)
+        - Content preview (erste 500 chars)
+        - Keywords als Bonus-Context
+        """
+        parts = []
+        
+        # Header bekommt.extra Weight durch Repetition
+        if header:
+            parts.append(header)
+            parts.append(header)
+        
+        # Content Preview (begrenzt für Performance)
+        if content:
+            preview = content[:500].strip()
+            parts.append(preview)
+        
+        # Keywords als Kontext
+        if keywords:
+            parts.append(" ".join(keywords[:10]))
+        
+        return " | ".join(parts)
+    
+    def get_queue_size(self) -> int:
+        """Gibt aktuelle Queue-Größe zurück."""
+        with self._lock:
+            return len(self._queue)
+    
+    def clear_queue(self) -> int:
+        """
+        Leert die Queue ohne zu verarbeiten.
+        
+        Returns:
+            Anzahl verworfener Tasks
+        """
+        with self._lock:
+            count = len(self._queue)
+            self._queue.clear()
+            self._processed_files.clear()
+        logger.info(f"Queue cleared: {count} tasks discarded")
+        return count
+    
+    def stop(self) -> None:
+        """Stoppt Background-Thread."""
+        self._bg_running = False
+        if self._bg_thread:
+            self._bg_thread.join(timeout=2.0)
+        logger.info("ChromaDBPlugin stopped")

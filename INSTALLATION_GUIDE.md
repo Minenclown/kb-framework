@@ -1,119 +1,170 @@
-# Obsidian Integration - Test Results Phase 5
+# KB Framework Installation Guide
 
-**Date:** 2026-04-12  
-**Status:** ✅ ALL TESTS PASSED
-
----
-
-## Summary
-
-| Category | Tests | Passed | Failed | Skipped |
-|----------|-------|--------|--------|---------|
-| **Unit Tests** (existing) | 119 | 119 | 0 | 0 |
-| **Integration Tests** (new) | 6 | 6 | 0 | 0 |
-| **E2E Tests** (new) | 6 | 6 | 0 | 0 |
-| **Total** | **131** | **131** | **0** | **0** |
+**KB Framework** - Knowledge Base Framework mit SQLite + ChromaDB Vector Search.
 
 ---
 
-## Test Coverage
+## Voraussetzungen
 
-### Integration Tests (INT-001 to INT-005)
-
-| Test ID | Name | Status | Description |
-|---------|------|--------|-------------|
-| INT-001 | `test_vault_lifecycle` | ✅ PASS | Full lifecycle: create → index → search → find_backlinks |
-| INT-002 | `test_vault_index_invalidation` | ✅ PASS | Index invalidation and reindex workflow |
-| INT-003 | `test_vault_search_with_real_files` | ✅ PASS | Search with real markdown files |
-| INT-004 | `test_backlinks_across_folders` | ✅ PASS | Links between files in nested folders |
-| INT-005 | `test_graph_completeness` | ✅ PASS | Graph contains all files and links |
-| INT-006 | `test_index_performance` | ✅ PASS | Performance test (bonus) |
-
-### E2E Tests (E2E-001 to E2E-004)
-
-| Test ID | Name | Status | Description |
-|---------|------|--------|-------------|
-| E2E-001 | `test_full_vault_workflow` | ✅ PASS | 8 files, complex links, all features |
-| E2E-002 | `test_search_relevance_ranking` | ✅ PASS | Search relevance ranking accuracy |
-| E2E-003 | `test_backlinks_accuracy` | ✅ PASS | Backlinks precision 100% |
-| E2E-004 | `test_graph_structure` | ✅ PASS | Graph structure correctness |
-| E2E-005 | `test_large_vault_performance` | ✅ PASS | 108 files, performance benchmark |
-| E2E-006 | `test_resolvable_links` | ✅ PASS | Folder/path link resolution |
+- Python 3.10+
+- pip
+- Tesseract OCR (optional, für bildbasierte PDFs)
+- SQLite3
 
 ---
 
-## Performance Measurements
+## Installation
 
-| Operation | Files | Time | Threshold |
-|-----------|-------|------|-----------|
-| Index 4 files | 4 | <0.01s | <2s ✅ |
-| Index 108 files | 108 | 0.06s | <5s ✅ |
-| Search "Note" | 108 | <0.01s | <1s ✅ |
+### 1. Python Dependencies installieren
 
-**Performance Summary:** All operations complete well under thresholds. Vault with 108 files indexes in ~60ms.
+```bash
+cd ~/projects/kb-framework
+pip install -r requirements.txt
+```
 
----
+### 2. System Dependencies (optional)
 
-## Bugs/Issues Found
+Für PDF-Indexierung mit OCR:
 
-### No Bugs - All Tests Pass ✅
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
 
-However, one **design limitation** was discovered that affects test implementation:
+# Optional: Tesseract Languages für weitere Sprachen
+# tesseract-ocr-fra, tesseract-ocr-spa, etc.
+```
 
-### PathResolver Relative Path Limitation
+### 3. Verzeichnisse erstellen
 
-**Issue:** The `PathResolver.resolve_link()` method does not support relative paths like `../AI` or bare names with hyphens like `neural-networks`.
+```bash
+mkdir -p ~/.knowledge/chroma_db/
+mkdir -p ~/.knowledge/backup/
+mkdir -p ~/.knowledge/embeddings/cache/
+```
 
-**Workaround Used:** Tests use absolute-style resolvable paths:
-- `[[knowledge/AI]]` instead of `[[AI]]`
-- `[[knowledge/ml/NeuralNetworks]]` instead of `[[../AI]]` or `[[neural-networks]]`
+### 4. Quick Install Script
 
-**Impact:** None for production use (Obsidian typically uses folder/path links), but limits test flexibility.
-
-**Recommendation:** Consider enhancing `PathResolver` to handle:
-1. Relative paths (`../AI`)
-2. Simple name matching for hyphenated filenames
-
----
-
-## Success Criteria Verification
-
-| Criteria | Target | Actual | Status |
-|----------|--------|--------|--------|
-| Unit Tests | 119/119 | 119/119 | ✅ |
-| Integration Tests | 5/5 | 6/6 | ✅ |
-| E2E Tests | 4/4 | 6/6 | ✅ |
-| Backlinks Precision | 100% | 100% | ✅ |
-| Search Relevance | Top-3 | Top-3+ | ✅ |
-| Graph Completeness | 100% | 100% | ✅ |
-| Performance (100 files) | <2s index | ~0.06s | ✅ |
+```bash
+cd ~/projects/kb-framework
+bash install.sh
+```
 
 ---
 
-## Files Created
+## Konfiguration
+
+### Datenbank initialisieren
+
+```bash
+cd ~/projects/kb-framework
+python3 -c "
+from kb.indexer import BiblioIndexer
+idx = BiblioIndexer('~/.knowledge/knowledge.db')
+idx.close()
+print('Datenbank initialisiert')
+"
+```
+
+### Embeddings generieren
+
+```bash
+# Statistiken anzeigen
+python3 kb/library/knowledge_base/embedding_pipeline.py --stats
+
+# Inkrementelles Update (nur neue/geänderte Dateien)
+python3 kb/library/knowledge_base/embedding_pipeline.py
+
+# Vollständiger Reload aller Embeddings
+python3 kb/library/knowledge_base/embedding_pipeline.py --reload
+```
+
+---
+
+## Nutzung
+
+### Python API
+
+```python
+from pathlib import Path
+from kb.indexer import BiblioIndexer
+from kb.library.knowledge_base.chroma_plugin import ChromaDBPlugin
+
+# Mit ChromaDB Plugin (automatische Embeddings)
+with BiblioIndexer(
+    "~/.knowledge/knowledge.db",
+    plugins=[ChromaDBPlugin()]
+) as indexer:
+    indexer.index_file(Path("projektplanung/test.md"))
+    indexer.index_directory("learnings")
+
+# Hybrid Search
+from kb.library.knowledge_base.hybrid_search import hybrid_search
+results = hybrid_search("MTHFR Genmutation", limit=5)
+```
+
+### CLI Nutzung
+
+```bash
+# Vollständige Indizierung
+python3 kb/indexer.py ~/.knowledge/knowledge.db projektplanung learnings
+
+# Backup erstellen
+bash kb/scripts/kb_backup.sh
+```
+
+---
+
+## Projektstruktur
 
 ```
-kb_framework/
+kb-framework/
+├── kb/
+│   ├── indexer.py              # Haupt-Indexer (SQLite)
+│   ├── config.py.template      # Konfigurations-Template
+│   └── library/
+│       └── knowledge_base/
+│           ├── chroma_integration.py   # ChromaDB Wrapper
+│           ├── chroma_plugin.py       # Plugin für Indexer
+│           ├── embedding_pipeline.py   # Batch-Embedding
+│           └── hybrid_search.py        # Hybrid Suche
+├── docs/
+│   └── CHROMA_INTEGRATION_PLAN.md
 ├── tests/
-│   ├── test_obsidian_integration.py  # NEW: INT-001 to INT-005
-│   └── test_obsidian_e2e.py          # NEW: E2E-001 to E2E-004
-└── TEST_RESULTS.md                    # This file
+├── install.sh                  # Quick Install Script
+└── requirements.txt
 ```
 
 ---
 
-## Conclusion
+## Troubleshooting
 
-**✅ Phase 5 Complete - All Tests Passing**
+### ChromaDB funktioniert nicht
 
-All 131 tests (119 existing + 12 new) pass successfully. The Obsidian integration is fully functional with:
-- Complete backlink discovery
-- Accurate search ranking
-- Proper graph generation
-- Excellent performance
+```bash
+# Prüfe ChromaDB Version
+python3 -c "import chromadb; print(chromadb.__version__)"
 
-No regressions introduced. Ready for next phase.
+# ChromaDB neu initialisieren
+rm -rf ~/.knowledge/chroma_db/
+python3 kb/library/knowledge_base/embedding_pipeline.py --reload
+```
+
+### Embeddings werden nicht generiert
+
+1. Prüfe Queue: `indexer.plugins[0].get_queue_size()`
+2. Manuell flushen: `indexer.plugins[0].flush()`
+3. Logs prüfen auf Fehler
+
+### Performance-Probleme
+
+- Batch-Size in `ChromaDBPlugin` reduzieren (Standard: 32)
+- Background-Thread nutzen: `plugin.flush_async()`
 
 ---
 
-_Last updated: 2026-04-12 13:25 UTC_
+## Weiterführende Links
+
+- [CHANGELOG.md](./CHANGELOG.md) - Änderungsprotokoll
+- [README.md](./README.md) - Projektübersicht
+- [SKILL.md](./SKILL.md) - OpenClaw Skill Dokumentation
