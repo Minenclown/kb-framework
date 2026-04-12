@@ -6,6 +6,10 @@
 chroma_db/
 .knowledge/chroma_db/
 
+# Indexes (user-specific)
+library/indexes/
+library/chroma_db/
+
 # Python
 __pycache__/
 *.pyc
