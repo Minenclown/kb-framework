@@ -2,8 +2,8 @@
 # Kopieren zu config.py und anpassen
 
 # Datenbank
-DB_PATH = "knowledge.db"  # SQLite DB
-CHROMA_PATH = ".knowledge/chroma_db/"  # ChromaDB Vektoren
+DB_PATH = "library/biblio.db"  # SQLite DB
+CHROMA_PATH = "library/chroma_db/"  # ChromaDB Vektoren (neben DB) (jetzt neben DB im library/ Verzeichnis)
 
 # Bibliothek
 LIBRARY_PATH = "library/"  # Wo die Dokumente liegen
