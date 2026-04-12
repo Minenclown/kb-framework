@@ -23,6 +23,14 @@ import hashlib
 
 from chroma_integration import ChromaIntegration, get_chroma
 
+# Import config
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+try:
+    from kb.config import CHROMA_PATH as _default_chroma_path
+except ImportError:
+    _default_chroma_path = "library/chroma_db/"
+
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,9 +74,9 @@ class EmbeddingPipeline:
     
     def __init__(
         self,
-        db_path: str = "~/knowledge/knowledge.db",
-        chroma_path: str = "~/.knowledge/chroma_db",
-        cache_path: str = "~/.knowledge/embeddings/cache.json",
+        db_path: str = "library/biblio.db",
+        chroma_path: str = None,
+        cache_path: str = "library/embeddings/cache.json",
         batch_size: int = 32,
         max_workers: int = 4
     ):
@@ -83,7 +91,10 @@ class EmbeddingPipeline:
             max_workers: Thread-Pool Worker für parallele Verarbeitung
         """
         self.db_path = Path(db_path).expanduser()
-        self.chroma_path = Path(chroma_path).expanduser()
+        if chroma_path is None:
+            self.chroma_path = Path(_default_chroma_path)
+        else:
+            self.chroma_path = Path(chroma_path).expanduser()
         self.cache_path = Path(cache_path).expanduser()
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -480,8 +491,8 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=None, help="Limit für Testing")
     parser.add_argument("--reload", action="store_true", help="Full Reload")
     parser.add_argument("--stats", action="store_true", help="Nur Statistiken")
-    parser.add_argument("--db-path", type=str, default="~/.knowledge/knowledge.db")
-    parser.add_argument("--chroma-path", type=str, default="~/.knowledge/chroma_db")
+    parser.add_argument("--db-path", type=str, default="library/biblio.db")
+    parser.add_argument("--chroma-path", type=str, default=None)
     
     args = parser.parse_args()
     

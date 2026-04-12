@@ -19,6 +19,14 @@ import logging
 from typing import Optional
 from contextlib import contextmanager
 
+# Import config
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+try:
+    from kb.config import CHROMA_PATH as _default_chroma_path
+except ImportError:
+    _default_chroma_path = "library/chroma_db/"
+
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,7 +47,7 @@ class ChromaIntegration:
     
     def __init__(
         self, 
-        chroma_path: str = "~/.knowledge/chroma_db",
+        chroma_path: str = None,
         model_name: str = "all-MiniLM-L6-v2"
     ):
         """
@@ -49,7 +57,10 @@ class ChromaIntegration:
             chroma_path: Pfad für persistente ChromaDB Instance
             model_name: Embedding-Modell (Hugging Face model name)
         """
-        self.chroma_path = Path(chroma_path).expanduser()
+        if chroma_path is None:
+            self.chroma_path = Path(_default_chroma_path)
+        else:
+            self.chroma_path = Path(chroma_path).expanduser()
         self.chroma_path.mkdir(parents=True, exist_ok=True)
         self.model_name = model_name
         self._model = None

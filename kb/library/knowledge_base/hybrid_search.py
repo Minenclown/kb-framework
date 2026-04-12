@@ -22,6 +22,13 @@ from typing import Optional, List, Dict, Union
 from dataclasses import dataclass
 
 from .chroma_integration import ChromaIntegration, get_chroma
+from kb.config import CHROMA_PATH
+
+# Provide default if config not available
+try:
+    _default_chroma_path = CHROMA_PATH
+except NameError:
+    _default_chroma_path = "library/chroma_db/"
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)
@@ -114,8 +121,8 @@ class HybridSearch:
 
     def __init__(
         self,
-        db_path: str = "~/knowledge/knowledge.db",
-        chroma_path: str = "~/.knowledge/chroma_db",
+        db_path: str = "library/biblio.db",
+        chroma_path: str = None,
         config: Optional[SearchConfig] = None
     ):
         """
@@ -127,7 +134,13 @@ class HybridSearch:
             config: SearchConfig (oder Default)
         """
         self.db_path = Path(db_path).expanduser()
-        self.chroma_path = Path(chroma_path).expanduser()
+        if chroma_path is None:
+            try:
+                self.chroma_path = Path(CHROMA_PATH)
+            except NameError:
+                self.chroma_path = Path(_default_chroma_path)
+        else:
+            self.chroma_path = Path(chroma_path)
         self.config = config or SearchConfig()
         
         self.chroma = ChromaIntegration(chroma_path=str(self.chroma_path))
@@ -253,10 +266,10 @@ class HybridSearch:
             SELECT 
                 id, file_id, file_path, section_header,
                 content_preview, content_full, section_level,
-                importance_score, keywords
+                COALESCE(importance_score, 0.5) AS importance_score, keywords
             FROM file_sections
             WHERE {' AND '.join(like_clauses)}
-            ORDER BY importance_score DESC
+            ORDER BY COALESCE(importance_score, 0.5) DESC
             LIMIT ?
         """
         params.append(limit)

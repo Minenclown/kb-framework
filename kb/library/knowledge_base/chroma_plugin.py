@@ -25,6 +25,14 @@ from queue import Queue, Empty
 from dataclasses import dataclass, field
 from datetime import datetime
 
+# Import config
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+try:
+    from kb.config import CHROMA_PATH as _default_chroma_path
+except ImportError:
+    _default_chroma_path = "library/chroma_db/"
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,8 +67,8 @@ class ChromaDBPlugin:
     
     def __init__(
         self,
-        db_path: str = "~/.knowledge/knowledge.db",
-        chroma_path: str = "~/.knowledge/chroma_db",
+        db_path: str = "library/biblio.db",
+        chroma_path: str = None,
         batch_size: int = 32,
         enabled: bool = True,
         auto_flush: bool = True,
@@ -78,7 +86,10 @@ class ChromaDBPlugin:
             collection_name: ChromaDB Collection Name
         """
         self.db_path = Path(db_path).expanduser()
-        self.chroma_path = Path(chroma_path).expanduser()
+        if chroma_path is None:
+            self.chroma_path = Path(_default_chroma_path)
+        else:
+            self.chroma_path = Path(chroma_path).expanduser()
         self.batch_size = batch_size
         self.enabled = enabled
         self.auto_flush = auto_flush
