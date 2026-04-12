@@ -6,24 +6,24 @@
 ![ChromaDB](https://img.shields.io/badge/chromadb-0.4+-red)
 ![Obsidian](https://img.shields.io/badge/obsidian-ready-purple)
 
-**Knowledge Base Framework mit ChromaDB, Hybrid Search und Obsidian Vault Support.**
+**Knowledge Base Framework with ChromaDB, Hybrid Search and Obsidian Vault Support.**
 
 ---
 
 ## Features
 
 ### Knowledge Base
-- **ChromaDB Integration** - Vector Search für semantische Ähnlichkeitssuche
-- **Hybrid Search** - Kombinierte Keyword + Vector Suche
-- **PDF Indexing** - Automatisches Indexieren von PDF Dokumenten
-- **Embedding Pipeline** - Flexible Embedding-Generierung
+- **ChromaDB Integration** - Vector search for semantic similarity
+- **Hybrid Search** - Combined keyword + vector search
+- **PDF Indexing** - Automatic PDF document indexing
+- **Embedding Pipeline** - Flexible embedding generation
 
 ### Obsidian Integration
 - **Parser** - WikiLinks, Tags, Frontmatter, Embeds
-- **Resolver** - Path Resolution mit Shortest-Match Algorithmus
-- **Indexer** - Invertierter Backlink-Index
-- **Vault** - High-Level API für alle Obsidian-Operationen
-- **Writer** - Schreib-Funktionen (Create, Update, Delete)
+- **Resolver** - Path resolution with shortest-match algorithm
+- **Indexer** - Inverted backlink index
+- **Vault** - High-level API for all Obsidian operations
+- **Writer** - Write functions (Create, Update, Delete)
 
 ---
 
@@ -36,7 +36,7 @@ pip install -r requirements.txt
 
 ---
 
-## Schnellstart
+## Quick Start
 
 ### Knowledge Base
 
@@ -56,11 +56,11 @@ from kb.obsidian import ObsidianVault
 vault = ObsidianVault("/path/to/vault")
 vault.index()
 
-# Finde Backlinks
+# Find backlinks
 backlinks = vault.find_backlinks("Notes/Meeting.md")
 
-# Volltext-Suche
-results = vault.search("Projekt X")
+# Full-text search
+results = vault.search("Project X")
 ```
 
 ---
@@ -71,17 +71,17 @@ results = vault.search("Projekt X")
 python -m pytest tests/ -v
 ```
 
-**153 Tests** - Alle bestanden.
+**153 Tests** - All passing.
 
 ---
 
-## Struktur
+## Structure
 
 ```
 kb_framework/
 ├── kb/
 │   ├── indexer.py              # KB Core
-│   ├── obsidian/               # Obsidian Module
+│   ├── obsidian/               # Obsidian Modules
 │   │   ├── parser.py
 │   │   ├── resolver.py
 │   │   ├── indexer.py
@@ -98,4 +98,4 @@ kb_framework/
 
 ## License
 
-MIT License - siehe [LICENSE](LICENSE)
+MIT License - see [LICENSE](LICENSE)
