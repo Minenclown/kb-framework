@@ -1,67 +1,77 @@
-# KB Framework - Knowledge Base für OpenClaw
+# KB Framework
 
-**Hybrid Search** mit SQLite + ChromaDB. Installiert in 2 Minuten.
+![Tests](https://img.shields.io/badge/tests-153%20passed-brightgreen)
+![Python](https://img.shields.io/badge/python-3.8+-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![ChromaDB](https://img.shields.io/badge/chromadb-0.4+-red)
+![Obsidian](https://img.shields.io/badge/obsidian-ready-purple)
+
+**Knowledge Base Framework mit ChromaDB, Hybrid Search und Obsidian Vault Support.**
 
 ---
 
-## Quick Start
+## Features
+
+### Knowledge Base
+- **ChromaDB Integration** - Vector Search für semantische Ähnlichkeitssuche
+- **Hybrid Search** - Kombinierte Keyword + Vector Suche
+- **PDF Indexing** - Automatisches Indexieren von PDF Dokumenten
+- **Embedding Pipeline** - Flexible Embedding-Generierung
+
+### Obsidian Integration
+- **Parser** - WikiLinks, Tags, Frontmatter, Embeds
+- **Resolver** - Path Resolution mit Shortest-Match Algorithmus
+- **Indexer** - Invertierter Backlink-Index
+- **Vault** - High-Level API für alle Obsidian-Operationen
+- **Writer** - Schreib-Funktionen (Create, Update, Delete)
+
+---
+
+## Installation
 
 ```bash
-# 1. In OpenClaw workspace kopieren
-cp -r kb_framework/ ~/.openclaw/workspace/
-
-# 2. Abhängigkeiten
-pip install chromadb
-
-# 3. Fertig!
+pip install -r requirements.txt
+./install.sh
 ```
 
 ---
 
-## Konfiguration
+## Schnellstart
 
-In `kb/indexer.py` anpassen:
+### Knowledge Base
 
 ```python
-DB_PATH = "/home/user/knowledge/knowledge.db"
-CHROMA_PATH = "/home/user/.knowledge/chroma_db/"
-LIBRARY_PATH = "/home/user/knowledge/library/"
+from kb.indexer import KBIndexer
+
+kb = KBIndexer()
+kb.index_directory("/path/to/docs")
+results = kb.search("query text")
+```
+
+### Obsidian Vault
+
+```python
+from kb.obsidian import ObsidianVault
+
+vault = ObsidianVault("/path/to/vault")
+vault.index()
+
+# Finde Backlinks
+backlinks = vault.find_backlinks("Notes/Meeting.md")
+
+# Volltext-Suche
+results = vault.search("Projekt X")
 ```
 
 ---
 
-## Nutzung
-
-### Python
-
-```python
-import sys
-sys.path.insert(0, "/path/to/kb_framework")
-
-from kb.indexer import BiblioIndexer
-from kb.library.knowledge_base.hybrid_search import HybridSearch
-
-# Indexieren
-with BiblioIndexer("knowledge.db") as idx:
-    idx.index_file("document.md")
-
-# Suchen
-hs = HybridSearch()
-results = hs.search("Suchbegriff", limit=10)
-```
-
-### CLI
+## Tests
 
 ```bash
-# Datei indexieren
-python3 kb/indexer.py dokument.md
-
-# Audit
-python3 kb/scripts/kb_full_audit.py
-
-# Ghost-Scanner
-python3 kb/scripts/kb_ghost_scanner.py
+python -m pytest tests/ -v
 ```
+
+**153 Tests** - Alle bestanden.
 
 ---
 
@@ -69,106 +79,23 @@ python3 kb/scripts/kb_ghost_scanner.py
 
 ```
 kb_framework/
-├── SKILL.md                    # OpenClaw Skill Doku
-├── README.md                   # Diese Datei
-└── kb/
-    ├── indexer.py             # Core Indexer
-    └── library/
-        └── knowledge_base/
-            ├── hybrid_search.py       # Suche
-            ├── chroma_integration.py  # ChromaDB
-            └── embedding_pipeline.py  # Embeddings
-    └── scripts/
-        ├── index_pdfs.py       # PDF + OCR
-        ├── kb_ghost_scanner.py # Verwaiste Einträge
-        ├── kb_full_audit.py   # Audit + Cleanup
-        └── kb_warmup.py       # Model vorladen
+├── kb/
+│   ├── indexer.py              # KB Core
+│   ├── obsidian/               # Obsidian Module
+│   │   ├── parser.py
+│   │   ├── resolver.py
+│   │   ├── indexer.py
+│   │   ├── vault.py
+│   │   └── writer.py
+│   └── scripts/                # Utilities
+├── tests/                      # 153 Tests
+├── README.md
+├── LICENSE
+└── requirements.txt
 ```
 
 ---
 
-## Datenbank
+## License
 
-- **SQLite** für strukturierte Daten
-- **ChromaDB** für semantische Suche
-- Automatische Foreign Key Prüfung
-- Tägliche Audit-Jobs möglich
-
----
-
-## Migration Guide (0 → KB Framework)
-
-### 1. System-Dependencies installieren
-```bash
-sudo apt-get install tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
-```
-
-### 2. Python Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Verzeichnisse erstellen
-```bash
-mkdir -p ~/.knowledge/library/
-mkdir -p ~/.knowledge/backup/
-mkdir -p ~/.knowledge/chroma_db/
-mkdir -p ~/.knowledge/embeddings/
-```
-
-### 4. Framework in OpenClaw workspace kopieren
-```bash
-cp -r kb_framework/ ~/.openclaw/workspace/
-```
-
-### 5. Datenbank initialisieren (Schema wird automatisch erstellt)
-```bash
-cd ~/.openclaw/workspace/kb_framework
-python3 kb/indexer.py ~/.knowledge/library/
-```
-
-### 6. Backup erstellen (nach erster Indexierung)
-```bash
-bash kb/scripts/kb_backup.sh
-```
-
-### 7. Modell vorladen (optional, vermeidet 12s Cold Start)
-```bash
-python3 kb/scripts/kb_warmup.py
-```
-
-### 8. Restore durchführen (nach Datenverlust)
-```bash
-# Backup-Name herausfinden
-ls ~/.knowledge/backup/
-
-# Restore
-bash kb/scripts/kb_restore.sh kb_backup_20260412_113032
-
-# Oder vom latest Backup:
-bash kb/scripts/kb_restore.sh latest
-```
-
----
-
-## Troubleshooting
-
-**ChromaDB langsam?**
-```bash
-python3 kb/scripts/kb_warmup.py
-```
-
-**Suche findet nichts?**
-```bash
-python3 kb/scripts/kb_full_audit.py
-```
-
-**OCR zu langsam?**
-```python
-# In kb/scripts/index_pdfs.py:
-GPU_ENABLED = True
-```
-
----
-
-MIT License
+MIT License - siehe [LICENSE](LICENSE)
