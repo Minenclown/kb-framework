@@ -123,8 +123,6 @@ results = vault.search("Project X")
 python -m pytest tests/ -v
 ```
 
-**153 Tests** - All passing.
-
 ---
 
 ## Structure
