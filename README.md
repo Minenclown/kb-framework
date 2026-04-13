@@ -6,7 +6,7 @@
 
 **Knowledge Base Framework with ChromaDB, Hybrid Search and Obsidian Vault Support.**
 
-## Quick Start
+## Quick Start (CLI)
 
 ```bash
 # Install
@@ -70,13 +70,20 @@ kb update --force                   # Force reinstall
 ## Installation
 
 ```bash
+# Clone to OpenClaw workspace
+git clone https://github.com/Minenclown/kb-framework.git ~/.openclaw/kb
+
+# Or manually:
+cp -r kb-framework ~/.openclaw/kb
+
+# Install dependencies
 pip install -r requirements.txt
 ./install.sh
 ```
 
 For global CLI access, add to your `.bashrc`:
 ```bash
-alias kb="/path/to/kb-framework/kb.sh"
+alias kb="~/.openclaw/kb/kb.sh"
 ```
 
 ---
@@ -123,25 +130,43 @@ python -m pytest tests/ -v
 ## Structure
 
 ```
-kb-framework/
-├── kb/
-│   ├── indexer.py              # KB Core
-│   ├── __main__.py            # CLI entry point
-│   ├── update.py              # Auto-updater
-│   ├── version.py             # Current version
-│   ├── obsidian/              # Obsidian Modules
+~/.openclaw/kb/                    # Installation path
+├── kb/                            # Core Python modules
+│   ├── indexer.py                 # KB Core (MarkdownIndexer)
+│   ├── __main__.py               # CLI entry point
+│   ├── update.py                 # Auto-updater
+│   ├── version.py                # Current version
+│   ├── obsidian/                 # Obsidian Integration
 │   │   ├── parser.py
 │   │   ├── resolver.py
 │   │   ├── indexer.py
 │   │   ├── vault.py
 │   │   └── writer.py
-│   └── scripts/               # Utilities
-├── kb.sh                       # CLI wrapper script
-├── tests/                      # 153 Tests
+│   └── scripts/                  # Utility scripts
+│       ├── index_pdfs.py
+│       ├── kb_ghost_scanner.py
+│       ├── kb_full_audit.py
+│       └── kb_warmup.py
+├── library/                       # 📚 Your content lives here
+│   ├── content/                  # Raw files (PDFs, docs, logs)
+│   │   ├── Gesundheit/
+│   │   ├── Projekte/
+│   │   └── ...
+│   └── agent/                    # Markdown files for agents
+│       ├── projektplanung/
+│       ├── memory/
+│       ├── Workflow_Referenzen/
+│       └── ...
+├── chroma_db/                     # ChromaDB vector database
+├── knowledge.db                   # Main SQLite database
+├── kb.sh                         # CLI wrapper script
+├── tests/                        # 153 Tests
 ├── README.md
 ├── LICENSE
 └── requirements.txt
 ```
+
+**Important:** The `library/` directory contains your actual content. This is separate from the framework code and is not pushed to GitHub.
 
 ---
 
