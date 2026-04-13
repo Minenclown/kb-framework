@@ -117,14 +117,6 @@ results = vault.search("Project X")
 
 ---
 
-## Tests
-
-```bash
-python -m pytest tests/ -v
-```
-
----
-
 ## Structure
 
 ```
