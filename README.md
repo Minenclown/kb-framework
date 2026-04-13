@@ -185,4 +185,4 @@ MIT License - see [LICENSE](LICENSE)
 - **OCR**: EasyOCR is slow on large PDFs (~30s/page).
 
 ### Development
-- See `FIX_PLAN.md` for planned improvements.
+- See `UPDATE_GOALS.md` for planned improvements.
