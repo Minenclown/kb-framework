@@ -1,14 +1,14 @@
 """
-ChromaDB Integration für Lumens Knowledge Base
+ChromaDB Integration for Lumens Knowledge Base
 ===============================================
 
 Phase 1: Vector Search Foundation
-Lokale ChromaDB Instance mit SQLite als Primary Store.
+Local ChromaDB instance with SQLite as primary store.
 
-Embedding-Modell: sentence-transformers/all-MiniLM-L6-v2
+Embedding model: sentence-transformers/all-MiniLM-L6-v2
 Dimensionality: 384
 
-Quelle: KB_Erweiterungs_Plan.md (Phase 1)
+Source: KB_Erweiterungs_Plan.md (Phase 1)
 """
 
 import chromadb
@@ -34,12 +34,12 @@ logger = logging.getLogger(__name__)
 
 class ChromaIntegration:
     """
-    ChromaDB Wrapper für Knowledge Base Integration.
+    ChromaDB wrapper for knowledge base integration.
     
     Responsibility:
-    - Connection Management zu ChromaDB
-    - Collection Creation/Retrieval
-    - Embedding-Funktion (all-MiniLM-L6-v2)
+    - Connection management to ChromaDB
+    - Collection creation/retrieval
+    - Embedding function (all-MiniLM-L6-v2)
     """
     
     # Singleton instance
@@ -51,11 +51,11 @@ class ChromaIntegration:
         model_name: str = "all-MiniLM-L6-v2"
     ):
         """
-        Initialize ChromaDB Connection.
+        Initialize ChromaDB connection.
         
         Args:
-            chroma_path: Pfad für persistente ChromaDB Instance
-            model_name: Embedding-Modell (Hugging Face model name)
+            chroma_path: Path for persistent ChromaDB instance
+            model_name: Embedding model (Hugging Face model name)
         """
         if chroma_path is None:
             self.chroma_path = Path(_default_chroma_path)
@@ -90,13 +90,13 @@ class ChromaIntegration:
     
     def embed_text(self, text: str) -> list[float]:
         """
-        Konvertiert Text zu Vektor-Embedding.
+        Converts text to vector embedding.
         
         Args:
-            text: Input-Text
+            text: Input text
             
         Returns:
-            Normalisierter Embedding-Vektor (384 dimension)
+            Normalized embedding vector (384 dimensions)
         """
         if not text or not text.strip():
             return [0.0] * 384
@@ -108,14 +108,14 @@ class ChromaIntegration:
     
     def embed_batch(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
         """
-        Batch-Embedding für mehrere Texte.
+        Batch embedding for multiple texts.
         
         Args:
-            texts: Liste von Texten
-            batch_size: Batch-Größe für Inference
+            texts: List of texts
+            batch_size: Batch size for inference
             
         Returns:
-            Liste von Embedding-Vektoren
+            List of embedding vectors
         """
         if not texts:
             return []
@@ -136,14 +136,14 @@ class ChromaIntegration:
         metadata: Optional[dict] = None
     ) -> chromadb.Collection:
         """
-        Erstellt oder holt eine Collection.
+        Creates or retrieves a collection.
         
         Args:
-            name: Collection-Name
-            metadata: Optionale Metadaten
+            name: Collection name
+            metadata: Optional metadata
             
         Returns:
-            ChromaDB Collection
+            ChromaDB collection
         """
         try:
             collection = self.client.get_collection(name=name)
@@ -159,13 +159,13 @@ class ChromaIntegration:
     
     def delete_collection(self, name: str) -> bool:
         """
-        Löscht eine Collection.
+        Deletes a collection.
         
         Args:
-            name: Collection-Name
+            name: Collection name
             
         Returns:
-            True wenn gelöscht
+            True if deleted
         """
         try:
             self.client.delete_collection(name=name)
@@ -181,7 +181,7 @@ class ChromaIntegration:
     
     @property
     def sections_collection(self) -> chromadb.Collection:
-        """Collection für file_sections Embeddings."""
+        """Collection for file_sections embeddings."""
         return self.get_or_create_collection(
             name="kb_sections",
             metadata={
@@ -193,7 +193,7 @@ class ChromaIntegration:
     
     @property
     def entities_collection(self) -> chromadb.Collection:
-        """Collection für Knowledge Graph Entities."""
+        """Collection for knowledge graph entities."""
         return self.get_or_create_collection(
             name="kg_entities",
             metadata={
@@ -208,7 +208,7 @@ class ChromaIntegration:
     # -------------------------------------------------------------------------
     
     def get_collection_stats(self, collection_name: str) -> dict:
-        """Holt Statistiken für eine Collection."""
+        """Retrieves statistics for a collection."""
         collection = self.client.get_collection(collection_name)
         return {
             "name": collection.name,
@@ -218,18 +218,18 @@ class ChromaIntegration:
     
     def delete_by_file_id(self, file_id: str, collection_name: str = "kb_sections") -> int:
         """
-        Löscht alle Embeddings für eine file_id aus ChromaDB.
+        Deletes all embeddings for a file_id from ChromaDB.
         
-        ChromaDB unterstützt kein DELETE mit WHERE - daher:
-        1. Query alle IDs mit passender file_id via Metadaten
-        2. Lösche via delete_by_ids()
+        ChromaDB does not support DELETE with WHERE, so:
+        1. Query all IDs with matching file_id via metadata
+        2. Delete via delete_by_ids()
         
         Args:
-            file_id: UUID der Datei
-            collection_name: ChromaDB Collection Name
+            file_id: UUID of the file
+            collection_name: ChromaDB collection name
             
         Returns:
-            Anzahl der gelöschten Einträge
+            Number of deleted entries
         """
         try:
             collection = self.client.get_collection(name=collection_name)
@@ -252,7 +252,7 @@ class ChromaIntegration:
             return 0
     
     def list_collections(self) -> list[dict]:
-        """Liste aller Collections mit Statistiken."""
+        """Lists all collections with statistics."""
         collections = self.client.list_collections()
         return [
             {
@@ -264,7 +264,7 @@ class ChromaIntegration:
         ]
     
     def reset_all(self) -> None:
-        """Reset aller Collections (gefährlich!)."""
+        """Reset all collections (dangerous!)."""
         self.client.reset()
         logger.warning("All ChromaDB collections reset!")
     
@@ -274,14 +274,14 @@ class ChromaIntegration:
     
     @classmethod
     def get_instance(cls, **kwargs) -> 'ChromaIntegration':
-        """Singleton-Pattern für Connection-Sharing."""
+        """Singleton pattern for connection sharing."""
         if cls._instance is None:
             cls._instance = cls(**kwargs)
         return cls._instance
     
     @classmethod
     def reset_instance(cls) -> None:
-        """Reset Singleton (für Tests)."""
+        """Reset singleton (for tests)."""
         cls._instance = None
 
 
@@ -293,7 +293,7 @@ class ChromaIntegration:
 _global_instance: Optional[ChromaIntegration] = None
 
 def get_chroma(**kwargs) -> ChromaIntegration:
-    """Holt oder erstellt globale ChromaIntegration Instance."""
+    """Gets or creates global ChromaIntegration instance."""
     global _global_instance
     if _global_instance is None:
         _global_instance = ChromaIntegration.get_instance(**kwargs)

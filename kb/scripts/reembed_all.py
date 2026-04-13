@@ -19,7 +19,7 @@ from datetime import datetime
 
 # Add framework to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent / "kb" / "library" / "knowledge_base"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "knowledge_base"))
 
 from kb.indexer import BiblioIndexer
 from kb.library.knowledge_base.chroma_integration import ChromaIntegration

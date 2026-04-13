@@ -1,16 +1,16 @@
 """
-Hybrid Search für Knowledge Base
+Hybrid Search for Knowledge Base
 =================================
 
 Phase 1: Vector Search Foundation
-Kombiniert SQLite (Keywords) + ChromaDB (Vector) Suche.
+Combines SQLite (Keywords) + ChromaDB (Vector) search.
 
-Unified Query Interface für:
-- Semantische Ähnlichkeitssuche (ChromaDB)
-- Keyword/LIKE Suche (SQLite)
-- Importance Score Ranking
+Unified Query Interface for:
+- Semantic similarity search (ChromaDB)
+- Keyword/LIKE search (SQLite)
+- Importance score ranking
 
-Quelle: KB_Erweiterungs_Plan.md (Phase 1)
+Source: KB_Erweiterungs_Plan.md (Phase 1)
 """
 
 import sqlite3
@@ -64,15 +64,15 @@ class SearchConfig:
     semantic_weight: float = 0.60   # 60% semantic
     keyword_weight: float = 0.40     # 40% keyword
     
-    # ChromaDB settings - mehr Treffer für bessere Results
-    semantic_limit: int = 100        # Top N from semantic search (increased from 50)
-    keyword_limit: int = 100         # Top N from keyword search (increased from 50)
+    # ChromaDB settings - more results for better results
+    semantic_limit: int = 100        # Top N from semantic search
+    keyword_limit: int = 100       # Top N from keyword search
     
     # Final results
     final_limit: int = 20
     
-    # Minimum scores - niedriger für mehr Treffer
-    min_combined_score: float = 0.05  # Lowered from 0.1 for more results
+    # Minimum scores - lower for more results
+    min_combined_score: float = 0.05
     
     # Boost factors
     importance_boost: bool = True    # Boost by importance_score
@@ -92,7 +92,7 @@ class HybridSearch:
     - Keyword search via SQLite (full-text LIKE)
     - Ranking via combined weighted scores
     
-    Phase 3.1: Wing/Room/Hall Filter implementiert
+    Phase 3.1: Wing/Room/Hall Filter implemented
     Phase 3.2: Query Caching
     """
     
@@ -129,9 +129,9 @@ class HybridSearch:
         Initialize Hybrid Search.
         
         Args:
-            db_path: Pfad zu knowledge.db
-            chroma_path: Pfad für ChromaDB
-            config: SearchConfig (oder Default)
+            db_path: Path to knowledge.db
+            chroma_path: Path for ChromaDB
+            config: SearchConfig (or default)
         """
         self.db_path = Path(db_path).expanduser()
         if chroma_path is None:
@@ -398,11 +398,12 @@ class HybridSearch:
     # -------------------------------------------------------------------------
     
     def _get_cached(self, cache_key: str):
-        """Ergebnis aus Cache holen."""
+        """Retrieve result from cache."""
+        return self._query_cache.get(cache_key)
         return self._query_cache.get(cache_key)
     
     def _set_cached(self, cache_key: str, result: list) -> None:
-        """Ergebnis in Cache speichern (LRU)."""
+        """Store result in cache (LRU)."""
         if len(self._query_cache) >= self._cache_max_size:
             # Remove oldest entry
             oldest = next(iter(self._query_cache))
@@ -485,16 +486,16 @@ class HybridSearch:
         date_to: Optional[str] = None
     ) -> list[SearchResult]:
         """
-        Hybrid Search mit Wing/Room/Hall Metadata-Filter.
+        Hybrid Search with Wing/Room/Hall metadata filter.
         
-        Phase 3.1: Vollständige Implementierung
+        Phase 3.1: Full implementation
         
-        Wing/Room/Hall sind virtuelle Kategorien:
-        - wing: Hauptbereich (z.B. 'gesundheit', 'agent', 'projekt')
-        - room: Unterbereich (z.B. 'dokumentation', 'workflow')
-        - hall: Spezifisches Thema (z.B. 'kb-optimierung', 'treechat')
+        Wing/Room/Hall are virtual categories:
+        - wing: Main area (e.g., 'health', 'agent', 'project')
+        - room: Sub-area (e.g., 'documentation', 'workflow')
+        - hall: Specific topic (e.g., 'kb-optimization', 'treechat')
         
-        Die Filter werden als Keywords oder Content-Marker interpretiert.
+        Filters are interpreted as keywords or content markers.
         
         Args:
             query: Natural language or keyword query

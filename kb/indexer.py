@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-MarkdownIndexer - Indiziert Markdown-Dateien nach Header-Struktur.
-Phase 1 der Suchmaschinen-Implementierung.
+MarkdownIndexer - Indexes Markdown files by header structure.
+Core component of the knowledge base search engine.
 
-Plugin-System: IndexingPlugin ABC ermöglicht flexible ChromaDB-Integration.
+Plugin System:
+    The IndexingPlugin ABC allows flexible integration with external systems
+    like ChromaDB for vector embeddings.
 """
 
 import hashlib
@@ -19,92 +21,87 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-# Logger für dieses Modul
 logger = logging.getLogger(__name__)
 
-# Konstanten
-MAX_CONTENT_LENGTH = 200  # Preview-Länge
+# Maximum content preview length for database storage
+MAX_CONTENT_PREVIEW = 200
 
 
 class IndexingPlugin(ABC):
     """
-    Abstract Base Class für Indexing-Plugins.
-    
-    Plugins werden nach erfolgreicher Indexierung einer Datei aufgerufen
-    und ermöglichen flexible Post-Processing-Aktionen (z.B. ChromaDB-Embedding).
-    
+    Abstract Base Class for indexing plugins.
+
+    Plugins are called after successful file indexing and enable
+    flexible post-processing actions (e.g., ChromaDB embedding).
+
     Example:
         class ChromaDBPlugin(IndexingPlugin):
             def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
-                # Queue für Background-Embedding
+                # Queue for background embedding
                 pass
     """
-    
+
     @abstractmethod
     def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
         """
-        Callback nach erfolgreicher Indexierung einer Datei.
-        
+        Callback after successful file indexing.
+
         Args:
-            file_path: Pfad zur indizierten Datei
-            sections: Anzahl der indizierten Abschnitte
-            file_id: UUID der Datei in der Datenbank
+            file_path: Path to the indexed file
+            sections: Number of indexed sections
+            file_id: UUID of the file in the database
         """
         pass
-    
+
     @abstractmethod
     def on_file_removed(self, file_path: Path) -> None:
         """
-        Callback nach Entfernung einer Datei aus dem Index.
-        
+        Callback after file removal from the index.
+
         Args:
-            file_path: Pfad der entfernten Datei
+            file_path: Path of the removed file
         """
         pass
-    
+
     def on_indexing_complete(self, stats: dict) -> None:
         """
-        Optionaler Callback nach vollständiger Indizierung (index_directory, check_and_update).
-        
+        Optional callback after full indexing (index_directory, check_and_update).
+
         Args:
-            stats: Statistik-Dict mit 'files' und 'sections' Zählern
+            stats: Statistics dict with 'files' and 'sections' counters
         """
         pass
 
 
 class MarkdownIndexer:
-    """Indiziert Markdown-Dateien nach Header-Struktur."""
+    """Indexes Markdown files by header structure."""
 
     HEADER_PATTERN = re.compile(r'^(#{1,6})\s+(.+)$')
 
-    # Stopwords für Keyword-Extraktion
-    #
-    # Diese Wörter werden bei der Keyword-Extraktion ignoriert.
-    # Typische deutsche Füllwörter (Artikel, Konjunktionen, Präpositionen)
-    # die keine semantische Bedeutung für die Suche haben.
-    #
-    # Warum?减少 noise in Suchergebnissen. Bei "Der Baum ist grün"
-    # sind "der", "ist" keine nützlichen Keywords - nur "Baum", "grün".
+    # Stopwords for keyword extraction
+    # These words are ignored during keyword extraction.
+    # Typical German filler words (articles, conjunctions, prepositions)
+    # that have no semantic meaning for search.
     STOPWORDS = {
-        'der', 'die', 'das', 'und', 'oder', 'mit', 'für', 'von', 'auf', 'in', 'zu',
-        'ist', 'sind', 'war', 'wurden', 'wird', 'werden', 'kann', 'können',
+        'der', 'die', 'das', 'und', 'oder', 'mit', 'fuer', 'von', 'auf', 'in', 'zu',
+        'ist', 'sind', 'war', 'wurden', 'wird', 'werden', 'kann', 'koennen',
         'eine', 'einer', 'einem', 'einen', 'als', 'an', 'auch', 'bei', 'bis',
         'durch', 'hat', 'nach', 'nicht', 'nur', 'ob', 'oder', 'sich',
         'sie', 'sind', 'so', 'sowie', 'um', 'unter', 'von', 'vor', 'wenn',
         'wie', 'wird', 'noch', 'schon', 'sehr', 'wurde', 'wurden', 'sein'
     }
 
-    # Umlaut-Mapping für Keyword-Normalisierung
-    UMLAUT_MAP = {'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss'}
+    # Umlaut mapping for keyword normalization
+    UMLAUT_MAP = {'ae': 'ae', 'oe': 'oe', 'ue': 'ue', 'ss': 'ss', 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss'}
 
     def __init__(self, db_path: str):
         self.db_path = db_path
 
     def parse_file(self, file_path: Path) -> List[dict]:
         """
-        Parse eine MD-Datei in Abschnitte.
+        Parse a MD file into sections.
 
-        Headers (# ## ###) definieren Abschnittsgrenzen.
+        Headers (# ## ###) define section boundaries.
         """
         sections = []
         header_stack: List[tuple] = []  # (level, header_text)
@@ -124,7 +121,7 @@ class MarkdownIndexer:
             match = self.HEADER_PATTERN.match(line)
 
             if match:
-                # Vorherigen Abschnitt speichern
+                # Save previous section
                 if current_section['header']:
                     sections.append(self._build_section(
                         current_section, file_path, i - 1
@@ -133,13 +130,13 @@ class MarkdownIndexer:
                 level = len(match.group(1))
                 header_text = match.group(2).strip()
 
-                # Hierarchie aktualisieren (Pop to parent level)
+                # Update hierarchy (pop to parent level)
                 header_stack = header_stack[:level - 1]
                 parent_header = header_stack[-1][1] if header_stack else None
                 parent_level = header_stack[-1][0] if header_stack else 0
                 header_stack.append((level, header_text))
 
-                # Neuen Abschnitt starten
+                # Start new section
                 current_section = {
                     'header': header_text,
                     'level': level,
@@ -151,7 +148,7 @@ class MarkdownIndexer:
             else:
                 current_section['content'].append(line)
 
-        # Letzten Abschnitt speichern
+        # Save last section
         if current_section['header']:
             sections.append(self._build_section(
                 current_section, file_path, len(lines)
@@ -161,9 +158,9 @@ class MarkdownIndexer:
 
     def _build_section(self, section_data: dict, file_path: Path, line_end: int) -> dict:
         """
-        Baue einen Abschnitt-Datensatz.
+        Build a section data record.
 
-        Erstellt einen fertigen Dict für die Datenbank-Insertion.
+        Creates a ready-to-insert dict for database insertion.
         """
         content = ''.join(section_data['content'])
         keywords = self._extract_keywords(content)
@@ -174,7 +171,7 @@ class MarkdownIndexer:
             'section_level': section_data['level'],
             'parent_header': section_data['parent_header'],
             'content_full': content,
-            'content_preview': content[:MAX_CONTENT_LENGTH] + '...' if len(content) > MAX_CONTENT_LENGTH else content,
+            'content_preview': content[:MAX_CONTENT_PREVIEW] + '...' if len(content) > MAX_CONTENT_PREVIEW else content,
             'line_start': section_data['line_start'],
             'line_end': line_end,
             'word_count': len(content.split()),
@@ -184,29 +181,29 @@ class MarkdownIndexer:
 
     def _extract_keywords(self, text: str) -> List[str]:
         """
-        Extrahiere Keywords aus Text.
+        Extract keywords from text.
 
-        Strategie:
-        - Wörter mit 4+ Buchstaben
-        - Stopwords entfernen
-        - Top 10 nach Häufigkeit
+        Strategy:
+        - Words with 4+ letters
+        - Remove stopwords
+        - Top 10 by frequency
         """
-        # Wörter mit 4+ Buchstaben
+        # Words with 4+ letters
         words = re.findall(r'\b[a-zA-ZäöüÄÖÜß]{4,}\b', text.lower())
-        # Stopwords entfernen
+        # Remove stopwords
         keywords = [w for w in words if w not in self.STOPWORDS]
-        # Top 10 nach Häufigkeit
+        # Top 10 by frequency
         return [k for k, _ in Counter(keywords).most_common(10)]
 
     def _hash_file(self, file_path: Path) -> str:
-        """Berechne MD5-Hash der Datei."""
+        """Calculate MD5 hash of file."""
         return hashlib.md5(file_path.read_bytes()).hexdigest()
 
     def _categorize_file(self, path: Path) -> str:
         """
-        Kategorisiere Datei basierend auf Pfad/Name.
+        Categorize file based on path/name.
 
-        Kategorien: learnings, adr, briefing, projektplanung, dokumentation
+        Categories: learnings, adr, briefing, projektplanung, dokumentation
         """
         name = path.name.lower()
         parent = path.parent.name
@@ -224,9 +221,9 @@ class MarkdownIndexer:
 
     def _normalize_keyword(self, keyword: str) -> str:
         """
-        Normalisiere Keyword (lowercase, Umlaute ersetzen).
+        Normalize keyword (lowercase, replace umlauts).
 
-        Beispiel: 'Ärger' -> 'aerger'
+        Example: 'Aerger' -> 'aeger'
         """
         normalized = keyword.lower()
         for k, v in self.UMLAUT_MAP.items():
@@ -236,46 +233,46 @@ class MarkdownIndexer:
 
 class BiblioIndexer:
     """
-    Vollständiger Indexer mit Datenbank-Anbindung und Plugin-System.
-    
-    Unterstützt Context-Manager-Protokoll für automatisches Schließen.
-    
-    Plugin-System ermöglicht flexible Post-Processing-Aktionen wie ChromaDB-Embedding.
+    Full indexer with database connection and plugin system.
+
+    Supports Context Manager protocol for automatic cleanup.
+
+    Plugin system enables flexible post-processing like ChromaDB embedding.
 
     Example:
         with BiblioIndexer("knowledge.db", plugins=[ChromaDBPlugin()]) as indexer:
             indexer.index_file("test.md")
-        # → SQLite + ChromaDB (automatic via plugin)
+        # -> SQLite + ChromaDB (automatic via plugin)
     """
 
     def __init__(self, db_path: str, plugins: List[IndexingPlugin] = None):
         """
-        Initialisiere BiblioIndexer mit Datenbank-Verbindung.
+        Initialize BiblioIndexer with database connection.
 
         Args:
-            db_path: Pfad zur SQLite-Datenbank
+            db_path: Path to SQLite database
             plugins: Optional list of IndexingPlugin instances
 
         Raises:
-            FileNotFoundError: Wenn das Datenbank-Verzeichnis nicht existiert
-            sqlite3.Error: Bei Datenbank-Verbindungsfehlern
+            FileNotFoundError: If database directory does not exist
+            sqlite3.Error: On database connection errors
         """
         self.db_path = db_path
         self.plugins = plugins or []
 
-        # Validierung: Datenbank-Verzeichnis muss existieren
+        # Validate: database directory must exist
         db_dir = Path(db_path).parent
         if db_dir and not db_dir.exists():
             raise FileNotFoundError(
-                f"Datenbank-Verzeichnis nicht gefunden: {db_dir}\n"
-                f"Bitte erstelle das Verzeichnis oder prüfe den Pfad."
+                f"Database directory not found: {db_dir}\n"
+                f"Please create the directory or check the path."
             )
 
         self.indexer = MarkdownIndexer(db_path)
         self.conn = sqlite3.connect(db_path)
         cursor = self.conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
-        cursor.execute("PRAGMA foreign_key_check")  # Verify FK mode
+        cursor.execute("PRAGMA foreign_key_check")
         self.conn.row_factory = sqlite3.Row
 
         # Create embeddings tracking table
@@ -298,34 +295,34 @@ class BiblioIndexer:
         self.conn.commit()
 
     def __enter__(self):
-        """Context-Manager Entry."""
+        """Context Manager Entry."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context-Manager Exit - schließt DB-Verbindung."""
+        """Context Manager Exit - closes DB connection."""
         self.close()
         return False
 
     def remove_file(self, file_path: str) -> bool:
         """
-        Entferne eine Datei aus dem Index.
+        Remove a file from the index.
 
-        Löscht alle zugehörigen Abschnitte (CASCADE) und Datei-Eintrag.
+        Deletes all related sections (CASCADE) and file entry.
         """
         try:
-            # Hole file_id
+            # Get file_id
             file_id = self.conn.execute(
                 "SELECT id FROM files WHERE file_path = ?",
                 (file_path,)
             ).fetchone()
 
             if not file_id:
-                logger.warning(f"Datei nicht gefunden: {file_path}")
+                logger.warning(f"File not found: {file_path}")
                 return False
 
             file_id = file_id[0]
-            
-            # Abschnitte löschen (erst section_keywords, dann file_sections)
+
+            # Delete sections (first section_keywords, then file_sections)
             self.conn.execute(
                 "DELETE FROM section_keywords WHERE section_id IN (SELECT id FROM file_sections WHERE file_id = ?)",
                 (file_id,)
@@ -339,33 +336,33 @@ class BiblioIndexer:
                 (file_path,)
             )
             self.conn.commit()
-            logger.info(f"🗑️  Entfernt: {file_path}")
-            
-            # Plugin-Callbacks
+            logger.info(f"Removed: {file_path}")
+
+            # Plugin callbacks
             for plugin in self.plugins:
                 try:
                     plugin.on_file_removed(Path(file_path))
                 except Exception as e:
                     logger.warning(f"Plugin {plugin.__class__.__name__} on_file_removed failed: {e}")
-            
+
             return True
         except Exception as e:
-            logger.error(f"⚠️  Fehler beim Entfernen: {e}")
+            logger.error(f"Error removing file: {e}")
             return False
 
     def get_embedding_hash(self, embedding) -> str:
-        """Berechnet SHA256-Hash eines Embedding-Vektors."""
+        """Calculate SHA256 hash of an embedding vector."""
         import hashlib
         import json
         vec_str = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
         return hashlib.sha256(vec_str.encode()).hexdigest()
 
     def close(self):
-        """Schließe Datenbank-Verbindung."""
+        """Close database connection."""
         self.conn.close()
 
     def _get_or_create_keyword(self, keyword: str) -> Optional[str]:
-        """Hole oder erstelle Keyword-Eintrag."""
+        """Get or create keyword entry."""
         normalized = self.indexer._normalize_keyword(keyword)
 
         existing = self.conn.execute(
@@ -389,30 +386,30 @@ class BiblioIndexer:
 
     def index_file(self, file_path: Path) -> int:
         """
-        Indiziere eine einzelne Datei.
+        Index a single file.
 
         Args:
-            file_path: Pfad zur .md Datei
+            file_path: Path to .md file
 
         Returns:
-            Anzahl indizierter Abschnitte (0 wenn unverändert)
+            Number of indexed sections (0 if unchanged)
         """
         if not file_path.exists() or not file_path.name.endswith('.md'):
             return 0
 
         current_hash = self.indexer._hash_file(file_path)
 
-        # Prüfe ob sich etwas geändert hat
+        # Check if anything changed
         existing = self.conn.execute(
             "SELECT id, file_hash FROM files WHERE file_path = ?",
             (str(file_path),)
         ).fetchone()
 
         if existing and existing['file_hash'] == current_hash:
-            logger.debug(f"⏭️  Unverändert: {file_path.name}")
+            logger.debug(f"Unchanged: {file_path.name}")
             return 0
 
-        # Alte Einträge löschen (CASCADE kümmert sich um section_keywords)
+        # Delete old entries (CASCADE handles section_keywords)
         file_id = existing['id'] if existing else None
         if file_id:
             self.conn.execute(
@@ -424,7 +421,7 @@ class BiblioIndexer:
             (str(file_path),)
         )
 
-        # Datei-Stammdaten
+        # File metadata
         file_id = str(uuid.uuid4())
         category = self.indexer._categorize_file(file_path)
         content = file_path.read_text(encoding='utf-8')
@@ -447,15 +444,15 @@ class BiblioIndexer:
             datetime.fromtimestamp(file_path.stat().st_mtime)
         ))
 
-        # Abschnitte indizieren
+        # Index sections
         sections = self.indexer.parse_file(file_path)
-        section_id_map: dict = {}  # header -> id für FK
+        section_id_map: dict = {}  # header -> id for FK
 
         for section in sections:
             section_id = str(uuid.uuid4())
             section_id_map[section['section_header']] = section_id
 
-            # Parent-ID auflösen
+            # Resolve parent ID
             parent_section_id = None
             if section.get('parent_header') and section['parent_header'] in section_id_map:
                 parent_section_id = section_id_map[section['parent_header']]
@@ -481,7 +478,7 @@ class BiblioIndexer:
                 current_hash
             ))
 
-            # Keywords in section_keywords eintragen
+            # Register keywords in section_keywords
             for keyword in section['keywords']:
                 keyword_id = self._get_or_create_keyword(keyword)
                 if keyword_id:
@@ -492,31 +489,31 @@ class BiblioIndexer:
                     """, (section_id, keyword_id))
 
         self.conn.commit()
-        logger.info(f"✅ {file_path.name}: {len(sections)} Abschnitte")
-        
-        # Plugin-Callbacks nach erfolgreicher Indexierung
+        logger.info(f"Indexed: {file_path.name}: {len(sections)} sections")
+
+        # Plugin callbacks after successful indexing
         for plugin in self.plugins:
             try:
                 plugin.on_file_indexed(Path(file_path), len(sections), file_id)
             except Exception as e:
                 logger.warning(f"Plugin {plugin.__class__.__name__} on_file_indexed failed: {e}")
-        
+
         return len(sections)
 
     def index_directory(self, dir_path: str, recursive: bool = True) -> dict:
         """
-        Indiziere alle .md-Dateien in einem Verzeichnis.
+        Index all .md files in a directory.
 
         Args:
-            dir_path: Verzeichnis-Pfad
-            recursive: Auch Unterverzeichnisse durchsuchen
+            dir_path: Directory path
+            recursive: Also search subdirectories
 
         Returns:
-            Dict mit 'files' und 'sections' Zählern
+            Dict with 'files' and 'sections' counters
         """
         path = Path(dir_path)
         if not path.exists():
-            logger.warning(f"⚠️  Verzeichnis nicht gefunden: {dir_path}")
+            logger.warning(f"Directory not found: {dir_path}")
             return {'files': 0, 'sections': 0}
 
         pattern = "**/*.md" if recursive else "*.md"
@@ -530,7 +527,7 @@ class BiblioIndexer:
                 stats['files'] += 1
                 stats['sections'] += sections
 
-        # Plugin-Callbacks nach abgeschlossener Indexierung
+        # Plugin callbacks after completed indexing
         for plugin in self.plugins:
             try:
                 if hasattr(plugin, 'on_indexing_complete'):
@@ -542,18 +539,18 @@ class BiblioIndexer:
 
     def full_reindex(self, root_paths: List[str]) -> dict:
         """
-        Vollständige Neu-Indizierung aller Dateien.
+        Full reindexing of all files.
 
         Args:
-            root_paths: Liste von Verzeichnissen zum Indizieren
+            root_paths: List of directories to index
 
         Returns:
-            Aggregierte Statistik
+            Aggregated statistics
         """
         total_stats = {'files': 0, 'sections': 0}
 
         for root in root_paths:
-            logger.info(f"\n📂 Indiziere: {root}")
+            logger.info(f"Indexing: {root}")
             stats = self.index_directory(root)
             total_stats['files'] += stats['files']
             total_stats['sections'] += stats['sections']
@@ -562,31 +559,31 @@ class BiblioIndexer:
 
     def check_and_update(self, watch_paths: List[str]) -> dict:
         """
-        Prüfe auf Änderungen und aktualisiere nur bei Bedarf.
+        Check for changes and update only when needed.
 
-        Echte Delta-Index Logik:
-        - Vergleicht file_hash mit gespeichertem Hash
-        - Indexiert nur geänderte Dateien
-        - Löscht entfernte Dateien aus dem Index
+        True delta indexing logic:
+        - Compares file_hash with stored hash
+        - Indexes only changed files
+        - Deletes removed files from index
 
         Args:
-            watch_paths: Liste von Verzeichnissen zu überwachen
+            watch_paths: List of directories to watch
 
         Returns:
-            Dict mit Statistik (files_updated, files_removed, sections)
+            Dict with statistics (files_updated, files_removed, sections)
         """
         stats = {'files_updated': 0, 'files_removed': 0, 'sections': 0}
 
         for watch_path in watch_paths:
             path = Path(watch_path)
             if not path.exists():
-                logger.warning(f"⚠️  Watch-Path nicht gefunden: {watch_path}")
+                logger.warning(f"Watch path not found: {watch_path}")
                 continue
 
-            # Aktuelle .md Dateien sammeln
+            # Collect current .md files
             md_files = {str(f): f for f in path.glob("**/*.md")}
 
-            # Already indexed files holen
+            # Get already indexed files
             indexed_files = {}
             cursor = self.conn.execute(
                 "SELECT file_path, file_hash FROM files"
@@ -594,7 +591,7 @@ class BiblioIndexer:
             for row in cursor.fetchall():
                 indexed_files[row['file_path']] = row['file_hash']
 
-            # Check für Updates (geänderte oder neue Dateien)
+            # Check for updates (changed or new files)
             for file_path, abs_path in md_files.items():
                 if not abs_path.exists():
                     continue
@@ -602,101 +599,100 @@ class BiblioIndexer:
                 current_hash = self.indexer._hash_file(abs_path)
 
                 if file_path not in indexed_files:
-                    # Neue Datei - indexieren
-                    logger.info(f"🆕 Neu: {abs_path.name}")
+                    # New file - index
+                    logger.info(f"New: {abs_path.name}")
                     sections = self.index_file(abs_path)
                     if sections > 0:
                         stats['files_updated'] += 1
                         stats['sections'] += sections
 
                 elif indexed_files[file_path] != current_hash:
-                    # Geänderte Datei - reindexieren
-                    logger.info(f"🔄 Geändert: {abs_path.name}")
+                    # Changed file - reindex
+                    logger.info(f"Changed: {abs_path.name}")
                     sections = self.index_file(abs_path)
                     if sections > 0:
                         stats['files_updated'] += 1
                         stats['sections'] += sections
 
-            # Entfernte Dateien finden und löschen
+            # Find and delete removed files
             for indexed_path in indexed_files:
                 if indexed_path not in md_files:
-                    logger.info(f"🗑️  Entfernt: {Path(indexed_path).name}")
+                    logger.info(f"Removed: {Path(indexed_path).name}")
                     self.remove_file(indexed_path)
                     stats['files_removed'] += 1
 
-        logger.info(f"📊 Delta-Index: {stats['files_updated']} aktualisiert, "
-                   f"{stats['files_removed']} entfernt, {stats['sections']} Abschnitte")
-        
-        # Plugin-Callbacks nach abgeschlossener Delta-Indexierung
+        logger.info(f"Delta index: {stats['files_updated']} updated, "
+                   f"{stats['files_removed']} removed, {stats['sections']} sections")
+
+        # Plugin callbacks after completed delta indexing
         for plugin in self.plugins:
             try:
                 if hasattr(plugin, 'on_indexing_complete'):
                     plugin.on_indexing_complete(stats)
             except Exception as e:
                 logger.warning(f"Plugin {plugin.__class__.__name__} on_indexing_complete failed: {e}")
-        
+
         return stats
 
     def index_unindexed(self, unindexed_dir: str = "unindexed") -> dict:
         """
-        Indexiert Dateien aus dem unindexed/ Ordner.
+        Index files from the unindexed/ folder.
 
-        Diese Methode findet alle Dateien im unindexed/ Verzeichnis
-        und indexiert sie automatisch in die Datenbank.
+        This method finds all files in the unindexed/ directory
+        and automatically indexes them into the database.
 
         Args:
-            unindexed_dir: Pfad zum unindexed Verzeichnis (relativ oder absolut)
+            unindexed_dir: Path to unindexed directory (relative or absolute)
 
         Returns:
-            Dict mit 'files' und 'sections' Zählern
+            Dict with 'files' and 'sections' counters
         """
         unindexed_path = Path(unindexed_dir)
 
         if not unindexed_path.exists():
-            logger.info(f"📁 Unindexed-Verzeichnis nicht gefunden: {unindexed_dir}")
+            logger.info(f"Unindexed directory not found: {unindexed_dir}")
             return {'files': 0, 'sections': 0}
 
-        # Finde alle .md Dateien
+        # Find all .md files
         md_files = list(unindexed_path.glob("*.md"))
 
         if not md_files:
-            logger.info(f"📁 Keine .md Dateien in {unindexed_dir}")
+            logger.info(f"No .md files in {unindexed_dir}")
             return {'files': 0, 'sections': 0}
 
-        logger.info(f"📂 {len(md_files)} Dateien zum Indexieren gefunden")
+        logger.info(f"Found {len(md_files)} files to index")
 
         stats = {'files': 0, 'sections': 0}
 
         for md_file in sorted(md_files):
-            # Verschiebe in das entsprechende Zielverzeichnis
-            # Annahme: unindexed/ enthält strukturierte Dateien
+            # Move to corresponding target directory
             target_path = Path("projektplanung") / md_file.name
 
-            # Indexiere die Datei
+            # Index the file
             sections = self.index_file(md_file)
 
             if sections > 0:
                 stats['files'] += 1
                 stats['sections'] += sections
 
-                # Optional: Verschiebe indizierte Datei
+                # Optionally move indexed file
                 try:
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(md_file), str(target_path))
-                    logger.info(f"📦 Verschoben: {md_file.name} -> {target_path}")
+                    logger.info(f"Moved: {md_file.name} -> {target_path}")
                 except Exception as e:
-                    logger.warning(f"⚠️  Verschieben fehlgeschlagen: {e}")
+                    logger.warning(f"Move failed: {e}")
 
         return stats
 
 
 def main():
-    """CLI für Indexer."""
+    """CLI for Indexer."""
     import sys
 
     db_path = sys.argv[1] if len(sys.argv) > 1 else "knowledge.db"
 
-    # Logging konfigurieren
+    # Configure logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(levelname)s: %(message)s'
@@ -704,7 +700,7 @@ def main():
 
     indexer = BiblioIndexer(db_path)
 
-    # Default-Pfade falls keine angegeben
+    # Default paths if none provided
     root_paths = [
         "projektplanung",
         "learnings",
@@ -713,12 +709,12 @@ def main():
     if len(sys.argv) > 2:
         root_paths = sys.argv[2:]
 
-    logger.info(f"🔍 Starte Indizierung in {db_path}")
-    logger.info(f"   Verzeichnisse: {', '.join(root_paths)}\n")
+    logger.info(f"Starting indexing to {db_path}")
+    logger.info(f"   Directories: {', '.join(root_paths)}\n")
 
     stats = indexer.full_reindex(root_paths)
 
-    logger.info(f"\n📊 Ergebnis: {stats['files']} Dateien, {stats['sections']} Abschnitte indiziert")
+    logger.info(f"\nResult: {stats['files']} files, {stats['sections']} sections indexed")
 
     indexer.close()
 

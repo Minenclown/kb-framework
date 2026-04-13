@@ -1,14 +1,14 @@
 """
-Embedding Pipeline für Knowledge Base
+Embedding Pipeline for Knowledge Base
 ======================================
 
 Phase 1: Vector Search Foundation
-Batch-Processing für 996 Files / 16.626 Sections.
+Batch processing for 996 files / 16,626 sections.
 
-Verarbeitet file_sections aus knowledge.db und generiert
-Embeddings für ChromaDB Vector Index.
+Processes file_sections from knowledge.db and generates
+embeddings for ChromaDB vector index.
 
-Quelle: KB_Erweiterungs_Plan.md (Phase 1)
+Source: KB_Erweiterungs_Plan.md (Phase 1)
 """
 
 import sqlite3
@@ -38,10 +38,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SectionRecord:
-    """Struktur für eine zu embeddende Section."""
-    id: str           # UUID aus file_sections
-    file_id: str      # Referenz zum Parent File
-    file_path: str    # Vollständiger Dateipfad
+    """Structure for a section to be embedded."""
+    id: str           # UUID from file_sections
+    file_id: str      # Reference to parent file
+    file_path: str    # Full file path
     section_header: str
     content_full: str
     content_preview: str
@@ -52,7 +52,7 @@ class SectionRecord:
 
 @dataclass
 class EmbeddingJob:
-    """Ein Embedding-Job mit Input und Output."""
+    """An embedding job with input and output."""
     section_id: str
     text: str
     embedding: Optional[list[float]] = None
@@ -63,13 +63,13 @@ class EmbeddingJob:
 
 class EmbeddingPipeline:
     """
-    Pipeline für Batch-Embedding der Knowledge Base Sections.
+    Pipeline for batch embedding of knowledge base sections.
     
     Responsibility:
-    - Liest Sections aus SQLite (knowledge.db)
-    - Generiert Embeddings (Batch Processing)
-    - Schreibt in ChromaDB
-    - Tracking mit Cache für Inkrementelle Updates
+    - Reads sections from SQLite (knowledge.db)
+    - Generates embeddings (batch processing)
+    - Writes to ChromaDB
+    - Tracking with cache for incremental updates
     """
     
     def __init__(
@@ -81,14 +81,14 @@ class EmbeddingPipeline:
         max_workers: int = 4
     ):
         """
-        Initialize Pipeline.
+        Initialize pipeline.
         
         Args:
-            db_path: Pfad zu knowledge.db
-            chroma_path: Pfad für ChromaDB
-            cache_path: Pfad für Embedding-Cache (JSON)
-            batch_size: Batch-Größe für Embedding
-            max_workers: Thread-Pool Worker für parallele Verarbeitung
+            db_path: Path to knowledge.db
+            chroma_path: Path for ChromaDB
+            cache_path: Path for embedding cache (JSON)
+            batch_size: Batch size for embedding
+            max_workers: Thread pool workers for parallel processing
         """
         self.db_path = Path(db_path).expanduser()
         if chroma_path is None:
@@ -107,7 +107,7 @@ class EmbeddingPipeline:
         logger.info(f"EmbeddingPipeline init: db={self.db_path}")
     
     def get_embedding_hash(self, embedding) -> str:
-        """Berechnet SHA256-Hash eines Embedding-Vektors."""
+        """Computes SHA256 hash of an embedding vector."""
         import hashlib
         import json
         vec_str = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
@@ -118,7 +118,7 @@ class EmbeddingPipeline:
     # -------------------------------------------------------------------------
     
     def _load_cache(self) -> None:
-        """Lädt Embedding-Cache aus JSON."""
+        """Loads embedding cache from JSON."""
         if self.cache_path.exists():
             try:
                 with open(self.cache_path) as f:
@@ -129,7 +129,7 @@ class EmbeddingPipeline:
                 self._cache = {}
     
     def _save_cache(self) -> None:
-        """Speichert Embedding-Cache als JSON."""
+        """Saves embedding cache as JSON."""
         try:
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.cache_path, 'w') as f:
@@ -139,7 +139,7 @@ class EmbeddingPipeline:
             logger.error(f"Could not save cache: {e}")
     
     def _needs_update(self, section_id: str, file_hash: str) -> bool:
-        """Prüft ob Section neu embeddet werden muss."""
+        """Checks if section needs re-embedding."""
         return self._cache.get(section_id) != file_hash
     
     # -------------------------------------------------------------------------
@@ -147,7 +147,7 @@ class EmbeddingPipeline:
     # -------------------------------------------------------------------------
     
     def _get_connection(self) -> sqlite3.Connection:
-        """Holt SQLite Connection."""
+        """Gets SQLite connection."""
         return sqlite3.connect(str(self.db_path))
     
     def get_sections_for_embedding(
@@ -156,14 +156,14 @@ class EmbeddingPipeline:
         force_reload: bool = False
     ) -> Generator[SectionRecord, None, None]:
         """
-        Yields Sections die Embedding brauchen.
+        Yields sections that need embedding.
         
         Args:
-            limit: Optionale Limit für Testing
-            force_reload: Wenn True, ignoriert Cache
+            limit: Optional limit for testing
+            force_reload: If True, ignores cache
             
         Yields:
-            SectionRecord für jede zu verarbeitende Section
+            SectionRecord for each section to process
         """
         self._load_cache()
         
@@ -227,12 +227,12 @@ class EmbeddingPipeline:
         keywords: list[str]
     ) -> str:
         """
-        Baut optimalen Text für Embedding.
+        Builds optimal text for embedding.
         
         Structure:
-        - Header als Title (hohe Gewichtung)
-        - Content preview (erste 500 chars)
-        - Keywords als Bonus-Context
+        - Header as title (high weight via repetition)
+        - Content preview (first 500 chars)
+        - Keywords as bonus context
         """
         parts = []
         
@@ -253,7 +253,7 @@ class EmbeddingPipeline:
         return " | ".join(parts)
     
     def count_pending_sections(self, force_reload: bool = False) -> int:
-        """Zählt Sections die Embedding brauchen."""
+        """Counts sections that need embedding."""
         count = 0
         for _ in self.get_sections_for_embedding(force_reload=force_reload):
             count += 1
@@ -265,13 +265,13 @@ class EmbeddingPipeline:
     
     def process_batch(self, sections: list[SectionRecord]) -> list[EmbeddingJob]:
         """
-        Verarbeitet einen Batch von Sections.
+        Processes a batch of sections.
         
         Args:
-            sections: Liste von SectionRecords
+            sections: List of SectionRecords
             
         Returns:
-            Liste von EmbeddingJobs mit Ergebnissen
+            List of EmbeddingJobs with results
         """
         jobs = []
         
@@ -319,15 +319,15 @@ class EmbeddingPipeline:
         collection_name: str = "kb_sections"
     ) -> int:
         """
-        Schreibt Embedding-Ergebnisse in ChromaDB.
+        Writes embedding results to ChromaDB.
         
         Args:
-            jobs: EmbeddingJobs mit Ergebnissen
+            jobs: EmbeddingJobs with results
             sections: Original SectionRecords
-            collection_name: Ziel-Collection
+            collection_name: Target collection
             
         Returns:
-            Anzahl erfolgreich geschriebener Items
+            Number of successfully written items
         """
         collection = self.chroma.get_or_create_collection(
             name=collection_name,
@@ -403,15 +403,15 @@ class EmbeddingPipeline:
         collection_name: str = "kb_sections"
     ) -> dict:
         """
-        Führt vollständigen Embedding-Pipeline aus.
+        Runs full embedding pipeline.
         
         Args:
-            limit: Optionale Limit für Testing
-            force_reload: Wenn True, neuembedden trotz Cache
-            collection_name: Collection für Output
+            limit: Optional limit for testing
+            force_reload: If True, re-embed despite cache
+            collection_name: Collection for output
             
         Returns:
-            Statistik-Dict mit Ergebnissen
+            Statistics dict with results
         """
         self._load_cache()
         
@@ -493,14 +493,14 @@ class EmbeddingPipeline:
         self,
         collection_name: str = "kb_sections"
     ) -> dict:
-        """Inkrementeller Update (nur neue/geänderte Sections)."""
+        """Incremental update (only new/changed sections)."""
         return self.run_full(force_reload=False, collection_name=collection_name)
     
     def run_full_reload(
         self,
         collection_name: str = "kb_sections"
     ) -> dict:
-        """Vollständiger Reload aller Sections."""
+        """Full reload of all sections."""
         logger.warning("Full reload: clearing cache and re-embedding ALL sections")
         self._cache = {}
         return self.run_full(force_reload=True, collection_name=collection_name)
@@ -513,10 +513,10 @@ class EmbeddingPipeline:
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Embedding Pipeline für KB")
-    parser.add_argument("--limit", type=int, default=None, help="Limit für Testing")
-    parser.add_argument("--reload", action="store_true", help="Full Reload")
-    parser.add_argument("--stats", action="store_true", help="Nur Statistiken")
+    parser = argparse.ArgumentParser(description="Embedding Pipeline for KB")
+    parser.add_argument("--limit", type=int, default=None, help="Limit for testing")
+    parser.add_argument("--reload", action="store_true", help="Full reload")
+    parser.add_argument("--stats", action="store_true", help="Statistics only")
     parser.add_argument("--db-path", type=str, default="library/biblio.db")
     parser.add_argument("--chroma-path", type=str, default=None)
     

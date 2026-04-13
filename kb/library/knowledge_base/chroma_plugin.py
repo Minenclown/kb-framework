@@ -1,10 +1,10 @@
 """
-ChromaDB Plugin für BiblioIndexer
+ChromaDB Plugin for BiblioIndexer
 ==================================
 
-Plugin-System für automatische ChromaDB-Integration nach Indexierung.
+Plugin system for automatic ChromaDB integration after indexing.
 
-Nutzt Background-Queue für non-blocking Embedding.
+Uses background queue for non-blocking embedding.
 
 Usage:
     from kb.indexer import BiblioIndexer
@@ -12,7 +12,7 @@ Usage:
     
     with BiblioIndexer("knowledge.db", plugins=[ChromaDBPlugin()]) as indexer:
         indexer.index_file(Path("test.md"))
-        # → SQLite + ChromaDB (automatic via plugin)
+        # -> SQLite + ChromaDB (automatic via plugin)
 """
 
 import json
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EmbeddingTask:
-    """Ein zu verarbeitender Embedding-Task."""
+    """An embedding task to be processed."""
     section_id: str
     file_id: str
     file_path: str
@@ -51,18 +51,18 @@ class EmbeddingTask:
 
 class ChromaDBPlugin:
     """
-    ChromaDB-Embedding Plugin für BiblioIndexer.
+    ChromaDB embedding plugin for BiblioIndexer.
     
     Responsibility:
-    - Queue verwaltet frisch indexierte Sections für Embedding
-    - Background-Thread für non-blocking Verarbeitung
-    - Batch-Processing für Effizienz
+    - Queue manages freshly indexed sections for embedding
+    - Background thread for non-blocking processing
+    - Batch processing for efficiency
     
     Features:
-    - Non-blocking: Indexierung wird nicht durch Embedding blockiert
-    - Batch-Processing: Sections werden in Batches verarbeitet
-    - Toggle: kann ein/ausgeschaltet werden
-    - Graceful: funktioniert auch wenn ChromaDB nicht verfügbar
+    - Non-blocking: Indexing not blocked by embedding
+    - Batch processing: Sections processed in batches
+    - Toggle: can be enabled/disabled
+    - Graceful: works even when ChromaDB is unavailable
     """
     
     def __init__(
@@ -75,15 +75,15 @@ class ChromaDBPlugin:
         collection_name: str = "kb_sections"
     ):
         """
-        Initialize ChromaDB Plugin.
+        Initialize ChromaDB plugin.
         
         Args:
-            db_path: Pfad zur SQLite-Datenbank
-            chroma_path: Pfad für ChromaDB
-            batch_size: Batch-Größe für Embedding
-            enabled: Ob Plugin aktiv ist
-            auto_flush: Automatisch flushen nach index_directory
-            collection_name: ChromaDB Collection Name
+            db_path: Path to SQLite database
+            chroma_path: Path for ChromaDB
+            batch_size: Batch size for embedding
+            enabled: Whether plugin is active
+            auto_flush: Auto flush after index_directory
+            collection_name: ChromaDB collection name
         """
         self.db_path = Path(db_path).expanduser()
         if chroma_path is None:
@@ -95,7 +95,7 @@ class ChromaDBPlugin:
         self.auto_flush = auto_flush
         self.collection_name = collection_name
         
-        # Queue für Background-Embedding
+        # Queue for background embedding
         self._queue: List[EmbeddingTask] = []
         self._processed_files: Set[str] = set()  # file_ids already queued
         
@@ -144,14 +144,14 @@ class ChromaDBPlugin:
     
     def on_file_indexed(self, file_path: Path, sections: int, file_id: str) -> None:
         """
-        Callback nach erfolgreicher Indexierung einer Datei.
+        Callback after successful indexing of a file.
         
-        Queued alle Sections der Datei für späteres Embedding.
+        Queues all sections of the file for later embedding.
         
         Args:
-            file_path: Pfad zur indizierten Datei
-            sections: Anzahl der indizierten Abschnitte
-            file_id: UUID der Datei in der Datenbank
+            file_path: Path to indexed file
+            sections: Number of indexed sections
+            file_id: UUID of the file in database
         """
         if not self.enabled:
             return
@@ -209,12 +209,12 @@ class ChromaDBPlugin:
     
     def on_file_removed(self, file_path: Path) -> None:
         """
-        Callback nach Entfernung einer Datei aus dem Index.
+        Callback after removing a file from index.
         
-        Entfernt zugehörige Entries aus ChromaDB.
+        Removes corresponding entries from ChromaDB.
         
         Args:
-            file_path: Pfad der entfernten Datei
+            file_path: Path of removed file
         """
         if not self.enabled:
             return
@@ -246,10 +246,10 @@ class ChromaDBPlugin:
     
     def on_indexing_complete(self, stats: dict) -> None:
         """
-        Optionaler Callback nach vollständiger Indizierung.
+        Optional callback after complete indexing.
         
         Args:
-            stats: Statistik-Dict mit 'files' und 'sections' Zählern
+            stats: Statistics dict with 'files' and 'sections' counters
         """
         if not self.enabled:
             return
@@ -261,12 +261,12 @@ class ChromaDBPlugin:
     
     def flush(self) -> int:
         """
-        Verarbeitet die Queue und schreibt nach ChromaDB.
+        Processes the queue and writes to ChromaDB.
         
-        Blocking-Methode - sollte nicht im Haupt-Thread bei vielen Items aufgerufen werden.
+        Blocking method - should not be called in main thread with many items.
         
         Returns:
-            Anzahl verarbeiteter Sections
+            Number of processed sections
         """
         if not self.enabled:
             return 0
@@ -375,9 +375,9 @@ class ChromaDBPlugin:
     
     def flush_async(self) -> None:
         """
-        Startet Background-Thread für non-blocking flush.
+        Starts background thread for non-blocking flush.
         
-        Non-blocking wichtig damit Indexing nicht blockiert wird.
+        Non-blocking important so indexing is not blocked.
         """
         if self._bg_thread and self._bg_thread.is_alive():
             logger.debug("Background flush already running")
@@ -393,7 +393,7 @@ class ChromaDBPlugin:
         logger.info("Background flush started")
     
     def _bg_flush_worker(self) -> None:
-        """Background worker für Flush."""
+        """Background worker for flush."""
         try:
             self.flush()
         except Exception as e:
@@ -408,12 +408,12 @@ class ChromaDBPlugin:
         keywords: List[str]
     ) -> str:
         """
-        Baut optimalen Text für Embedding.
+        Builds optimal text for embedding.
         
         Structure:
-        - Header als Title (hohe Gewichtung durch Repetition)
-        - Content preview (erste 500 chars)
-        - Keywords als Bonus-Context
+        - Header as title (high weight via repetition)
+        - Content preview (first 500 chars)
+        - Keywords as bonus context
         """
         parts = []
         
@@ -422,7 +422,7 @@ class ChromaDBPlugin:
             parts.append(header)
             parts.append(header)
         
-        # Content Preview (begrenzt für Performance)
+        # Content preview (limited for performance)
         if content:
             preview = content[:500].strip()
             parts.append(preview)
@@ -434,16 +434,16 @@ class ChromaDBPlugin:
         return " | ".join(parts)
     
     def get_queue_size(self) -> int:
-        """Gibt aktuelle Queue-Größe zurück."""
+        """Returns current queue size."""
         with self._lock:
             return len(self._queue)
     
     def clear_queue(self) -> int:
         """
-        Leert die Queue ohne zu verarbeiten.
+        Clears the queue without processing.
         
         Returns:
-            Anzahl verworfener Tasks
+            Number of discarded tasks
         """
         with self._lock:
             count = len(self._queue)
@@ -453,7 +453,7 @@ class ChromaDBPlugin:
         return count
     
     def stop(self) -> None:
-        """Stoppt Background-Thread."""
+        """Stops background thread."""
         self._bg_running = False
         if self._bg_thread:
             self._bg_thread.join(timeout=2.0)
