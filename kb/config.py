@@ -1,12 +1,13 @@
 # KB Framework Konfiguration
+import os
 from pathlib import Path
 
 # Datenbank
-DB_PATH = "library/biblio.db"  # SQLite DB
-CHROMA_PATH = "library/chroma_db/"  # ChromaDB Vektoren (neben DB) (jetzt neben DB im library/ Verzeichnis)
+DB_PATH = os.getenv("KB_DB_PATH", "library/biblio.db")  # SQLite DB
+CHROMA_PATH = os.getenv("KB_CHROMA_PATH", "library/chroma_db/")  # ChromaDB Vektoren
 
 # Bibliothek
-LIBRARY_PATH = "library/"  # Wo die Dokumente liegen
+LIBRARY_PATH = os.getenv("KB_LIBRARY_PATH", "library/")  # Wo die Dokumente liegen
 
 # Such-Parameter
 DEFAULT_LIMIT = 20

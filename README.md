@@ -78,7 +78,7 @@ python -m pytest tests/ -v
 ## Structure
 
 ```
-kb_framework/
+kb-framework/
 ├── kb/
 │   ├── indexer.py              # KB Core
 │   ├── obsidian/               # Obsidian Modules

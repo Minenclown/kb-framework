@@ -167,7 +167,7 @@ for node in graph['nodes']:
 ## 5. Test-Location
 
 ```
-kb_framework/
+kb-framework/
 ├── tests/
 │   ├── test_obsidian_integration.py  # NEU
 │   └── test_obsidian_e2e.py          # NEU

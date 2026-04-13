@@ -283,7 +283,7 @@ indexer.check_and_update(["/path/to/watch"])
 
 - [ ] `reembed_all.py` Workflow dokumentieren
 - [ ] `INSTALLATION_GUIDE.md` korrigieren (richtiger Inhalt)
-- [ ] `install.sh` Pfad-Fehler beheben (`kb_framework/` → `kb-framework/`)
+- [ ] `install.sh` Pfad-Fehler beheben (`kb-framework/` ist korrekt)
 - [ ] Leere Ordner aufräumen oder entfernen
 
 ---
@@ -358,7 +358,7 @@ indexer.check_and_update(["/path/to/watch"])
 | `kb/library/knowledge_base/chroma_plugin.py` | Create: ChromaDBPlugin class | ~150 |
 | `kb/library/knowledge_base/hybrid_search.py` | Modify: Add `search_with_chroma()` | ~30 |
 | `INSTALLATION_GUIDE.md` | Replace: Wrong content with correct install guide | ~100 |
-| `install.sh` | Fix: `kb_framework/` → `kb-framework/` | 1 line |
+| `install.sh` | ✅ Bereits korrekt: `kb-framework/` | 1 line |
 
 ---
 

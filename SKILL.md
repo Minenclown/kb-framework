@@ -21,10 +21,10 @@ Eine vollständige Knowledge Base mit:
 ### 1. Skill installieren
 ```bash
 # Clone oder entpacke in dein OpenClaw workspace
-cp -r kb_framework ~/.openclaw/workspace/
+cp -r kb-framework ~/.openclaw/workspace/
 
 # Oder nur den Skill:
-cp kb_framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
+cp kb-framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
 ```
 
 ### 2. Abhängigkeiten installieren
@@ -34,7 +34,7 @@ pip install chromadb
 
 ### 3. Datenbank initialisieren
 ```bash
-python3 ~/.openclaw/workspace/kb_framework/kb/indexer.py --init
+python3 ~/.openclaw/workspace/kb-framework/kb/indexer.py --init
 ```
 
 ---
@@ -58,7 +58,7 @@ LIBRARY_PATH = "/home/user/knowledge/library/"
 ```python
 # Import
 import sys
-sys.path.insert(0, "/path/to/kb_framework")
+sys.path.insert(0, "/path/to/kb-framework")
 from kb.indexer import BiblioIndexer
 
 # Datei indexieren
@@ -92,7 +92,7 @@ python3 kb/scripts/kb_warmup.py
 ## Architektur
 
 ```
-kb_framework/
+kb-framework/
 ├── SKILL.md                    # Diese Datei
 ├── README.md                   # Detaillierte Doku
 ├── kb/
