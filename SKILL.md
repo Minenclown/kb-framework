@@ -6,44 +6,44 @@
 
 ---
 
-## Was ist das KB Framework?
+## What is the KB Framework?
 
-Eine vollständige Knowledge Base mit:
+A complete Knowledge Base with:
 - **Hybrid Search** (semantic + keyword)
-- **Automatische Indexierung** (Markdown, PDF, OCR)
+- **Automatic Indexing** (Markdown, PDF, OCR)
 - **SQLite + ChromaDB** Integration
-- **Daily Audits** für Datenqualität
+- **Daily Audits** for data quality
 
 ---
 
 ## Installation (1 Minute)
 
-### 1. Skill installieren
+### 1. Install the Skill
 ```bash
-# Clone oder entpacke in dein OpenClaw workspace
+# Clone or extract into your OpenClaw workspace
 cp -r kb-framework ~/.openclaw/workspace/
 
-# Oder nur den Skill:
+# Or just the skill:
 cp kb-framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
 ```
 
-### 2. Abhängigkeiten installieren
+### 2. Install Dependencies
 ```bash
 pip install chromadb
 ```
 
-### 3. Datenbank initialisieren
+### 3. Initialize Database
 ```bash
 python3 ~/.openclaw/workspace/kb-framework/kb/indexer.py --init
 ```
 
 ---
 
-## Konfiguration
+## Configuration
 
-### Pfade anpassen (in `kb/indexer.py`)
+### Adjust Paths (in `kb/indexer.py`)
 ```python
-# Zeile ~15
+# Line ~15
 DB_PATH = "/home/user/knowledge/knowledge.db"
 CHROMA_PATH = "/home/user/.knowledge/chroma_db/"
 LIBRARY_PATH = "/home/user/knowledge/library/"
@@ -51,7 +51,7 @@ LIBRARY_PATH = "/home/user/knowledge/library/"
 
 ---
 
-## Nutzung
+## Usage
 
 ### Python API
 
@@ -61,162 +61,162 @@ import sys
 sys.path.insert(0, "/path/to/kb-framework")
 from kb.indexer import BiblioIndexer
 
-# Datei indexieren
+# Index a file
 with BiblioIndexer("/path/to/knowledge.db") as idx:
     idx.index_file("/path/to/file.md")
 
-# Suchen
+# Search
 from kb.library.knowledge_base.hybrid_search import HybridSearch
 hs = HybridSearch()
-results = hs.search("Dein Suchbegriff", limit=10)
+results = hs.search("Your search term", limit=10)
 ```
 
 ### CLI
 
 ```bash
-# Neue Datei indexieren
+# Index a new file
 python3 kb/indexer.py /path/to/file.md
 
-# Ghost-Scanner (findet verwaiste DB-Einträge)
+# Ghost Scanner (finds orphaned DB entries)
 python3 kb/scripts/kb_ghost_scanner.py
 
-# Vollständiger Audit
+# Full Audit
 python3 kb/scripts/kb_full_audit.py
 
-# ChromaDB warmup (bei Boot)
+# ChromaDB Warmup (at boot)
 python3 kb/scripts/kb_warmup.py
 ```
 
 ---
 
-## Architektur
+## Architecture
 
 ```
 kb-framework/
-├── SKILL.md                    # Diese Datei
-├── README.md                   # Detaillierte Doku
+├── SKILL.md                    # This file
+├── README.md                   # Detailed documentation
 ├── kb/
 │   ├── indexer.py             # Core Indexer (BiblioIndexer)
 │   └── library/
 │       └── knowledge_base/
-│           ├── hybrid_search.py       # Hybrid Suche
+│           ├── hybrid_search.py       # Hybrid Search
 │           ├── chroma_integration.py  # ChromaDB Wrapper
 │           └── embedding_pipeline.py # Batch Embeddings
 └── scripts/
-    ├── index_pdfs.py          # PDF + OCR Indexierung
-    ├── kb_ghost_scanner.py    # Ghost-Dateien finden
+    ├── index_pdfs.py          # PDF + OCR Indexing
+    ├── kb_ghost_scanner.py    # Find ghost files
     ├── kb_full_audit.py       # Audit + Cleanup
-    └── kb_warmup.py           # Model vorladen
+    └── kb_warmup.py           # Preload model
 ```
 
 ---
 
-## Datenbank-Schema
+## Database Schema
 
-### `files` Tabelle
-| Feld | Typ | Beschreibung |
-|------|-----|--------------|
+### `files` Table
+| Field | Type | Description |
+|------|------|-------------|
 | id | TEXT | UUID |
-| file_path | TEXT | Absoluter Pfad |
-| file_name | TEXT | Dateiname |
-| file_category | TEXT | Kategorie |
+| file_path | TEXT | Absolute path |
+| file_name | TEXT | Filename |
+| file_category | TEXT | Category |
 | file_type | TEXT | pdf/md/txt |
 | file_size | INTEGER | Bytes |
-| line_count | INTEGER | Zeilen |
+| line_count | INTEGER | Lines |
 | file_hash | TEXT | SHA256 |
-| last_indexed | TIMESTAMP | Letzte Indexierung |
+| last_indexed | TIMESTAMP | Last indexing |
 | index_status | TEXT | indexed/pending/failed |
-| source_path | TEXT | Original-Pfad |
-| indexed_path | TEXT | MD-Extrakt-Pfad |
+| source_path | TEXT | Original path |
+| indexed_path | TEXT | MD extract path |
 | is_indexed | INTEGER | 0/1 |
 
-### `file_sections` Tabelle
-| Feld | Typ | Beschreibung |
-|------|-----|--------------|
+### `file_sections` Table
+| Field | Type | Description |
+|------|------|-------------|
 | id | TEXT | UUID |
 | file_id | TEXT | FK → files |
-| section_header | TEXT | Überschrift |
+| section_header | TEXT | Heading |
 | section_level | INTEGER | 1-6 |
-| content_preview | TEXT | Erste 500 Zeichen |
-| content_full | TEXT | Voller Inhalt |
+| content_preview | TEXT | First 500 characters |
+| content_full | TEXT | Full content |
 | keywords | TEXT | JSON Array |
 | importance_score | REAL | 0.0-1.0 |
 
-### `keywords` Tabelle
-| Feld | Typ | Beschreibung |
-|------|-----|--------------|
+### `keywords` Table
+| Field | Type | Description |
+|------|------|-------------|
 | id | INTEGER | AUTOINCREMENT |
-| keyword | TEXT | Wort |
-| weight | REAL | Häufigkeit |
+| keyword | TEXT | Word |
+| weight | REAL | Frequency |
 
 ---
 
 ## Troubleshooting
 
-### "ChromaDB langsam beim ersten Start"
+### "ChromaDB slow on first start"
 ```bash
 python3 kb/scripts/kb_warmup.py
 ```
 
-### "Suche findet nichts"
+### "Search finds nothing"
 ```bash
-# Audit starten
+# Run audit
 python3 kb/scripts/kb_full_audit.py
 
-# Ghost-Scanner
+# Ghost Scanner
 python3 kb/scripts/kb_ghost_scanner.py
 ```
 
-### "OCR zu langsam"
+### "OCR too slow"
 ```python
-# In index_pdfs.py GPU aktivieren:
-GPU_ENABLED = True  # Standard: False
+# Enable GPU in index_pdfs.py:
+GPU_ENABLED = True  # Default: False
 ```
 
 ---
 
-## Library Struktur (WICHTIG)
+## Library Structure (IMPORTANT)
 
-### content/ - Rohdateien
-Alle nicht-Markdown Dateien:
+### content/ - Raw Files
+All non-Markdown files:
 ```
 library/content/
-├── Gesundheit/           # PDFs, Studien
-├── Medizin_Studien/      # Medizinische Literatur
-├── Bücher/              # Bücher, Guides
+├── Gesundheit/           # PDFs, Studies
+├── Medizin_Studien/      # Medical Literature
+├── Bücher/              # Books, Guides
 ├── Sonstiges/           # Uncategorized
-└── [kategorie]/          # Eigene Kategorien möglich
+└── [category]/           # Custom categories possible
 ```
 
-### agent/ - Markdown Dateien
-Alle .md Dateien für Agenten:
+### agent/ - Markdown Files
+All .md files for agents:
 ```
 library/agent/
-├── projektplanung/      # Agent-Pläne
-├── memory/              # Tägliche Logs
-├── Workflow_Referenzen/ # Wiederverwendbare Workflows
-├── agents/             # Agent-spezifische Docs
-└── [kategorie]/        # Eigene Kategorien möglich
+├── projektplanung/      # Agent plans
+├── memory/              # Daily logs
+├── Workflow_Referenzen/ # Reusable workflows
+├── agents/             # Agent-specific docs
+└── [category]/        # Custom categories possible
 ```
 
-### Neue Dateien integrieren
+### Integrating New Files
 
-**Regel:** `library/[content|agent]/[kategorie]/[thema]/[datei]`
+**Rule:** `library/[content|agent]/[category]/[topic]/[file]`
 
-Beispiele:
+Examples:
 ```bash
-# Neues Gesundheits-PDF
+# New health PDF
 library/content/Gesundheit/2026/Chelat-Therapie.pdf
 
-# Neuer Agent-Plan
+# New agent plan
 library/agent/projektplanung/Treechat_Upgrade.md
 
-# Neues Learning
+# New learning
 library/agent/learnings/2026-04-12_Git_Workflow.md
 ```
 
 ---
 
-## Lizenz
+## License
 
-MIT License - frei nutzbar.
+MIT License - free to use.

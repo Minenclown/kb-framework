@@ -1,0 +1,190 @@
+# KB Framework - Security Sensitive Functions
+# This file documents all functions that perform write/delete operations
+# and explains why they are necessary for the framework's functionality.
+
+================================================================================
+WRITE OPERATIONS
+================================================================================
+
+1. Obsidian Writer (kb/library/obsidian/writer.py)
+   -----------------------------------------------------------------------------
+   Function: create_note(vault_path, note_path, content, frontmatter)
+   Line: ~45
+   What: Creates new .md files in Obsidian vault
+   Why: Core feature - allows programmatic note creation from indexed content
+   
+   Function: update_frontmatter(vault_path, note_path, frontmatter)
+   Line: ~78
+   What: Modifies YAML frontmatter of existing notes
+   Why: Updates metadata (tags, dates) without changing note content
+   
+   Function: update_note_content(vault_path, note_path, content)
+   Line: ~112
+   What: Overwrites note content while preserving frontmatter
+   Why: Syncs updated indexed content to existing notes
+   
+   Function: replace_wikilinks(vault_path, old_link, new_link)
+   Line: ~156
+   What: Batch replaces wiki-style links across all notes
+   Why: Maintains link integrity when renaming notes
+
+2. File Indexer (kb/indexer.py)
+   -----------------------------------------------------------------------------
+   Function: index_file(file_path)
+   Line: ~245
+   What: INSERT/UPDATE in SQLite database (files, file_sections tables)
+   Why: Core feature - builds searchable index of library content
+   
+   Function: delete_file(file_id)
+   Line: ~312
+   What: DELETE from database + CASCADE to sections/keywords
+   Why: Removes indexed content when source file deleted
+   
+   Function: update_file_hash(file_id, new_hash)
+   Line: ~289
+   What: UPDATE file_hash in database
+   Why: Tracks file changes for re-indexing decisions
+
+3. ChromaDB Integration (kb/library/knowledge_base/chroma_integration.py)
+   -----------------------------------------------------------------------------
+   Function: add_sections(sections)
+   Line: ~134
+   What: INSERT vectors into ChromaDB collection
+   Why: Enables semantic search on indexed content
+   
+   Function: delete_by_file_id(file_id)
+   Line: ~198
+   What: DELETE vectors by metadata filter
+   Why: Removes embeddings when source file deleted
+
+4. ChromaDB Plugin (kb/library/knowledge_base/chroma_plugin.py)
+   -----------------------------------------------------------------------------
+   Function: flush()
+   Line: ~89
+   What: Batch INSERT to ChromaDB + tracking table
+   Why: Efficient batch processing of embeddings
+   
+   Function: track_embedding(section_id, file_id, embedding_hash)
+   Line: ~156
+   What: INSERT into embeddings SQLite table
+   Why: Tracks which sections have been embedded
+
+5. Sync Script (kb/scripts/sync_chroma.py)
+   -----------------------------------------------------------------------------
+   Function: sync_execute()
+   Line: ~89
+   What: Batch INSERT missing sections to ChromaDB
+   Why: Synchronizes SQLite state with ChromaDB
+
+6. Migration Script (kb/scripts/migrate.py)
+   -----------------------------------------------------------------------------
+   Function: migration_001_add_embeddings_table()
+   Line: ~28
+   What: CREATE TABLE, CREATE INDEX
+   Why: Database schema evolution
+   
+   Function: set_db_version()
+   Line: ~56
+   What: INSERT/UPDATE schema_version table
+   Why: Tracks migration state
+
+================================================================================
+DELETE OPERATIONS
+================================================================================
+
+1. Obsidian Writer (kb/library/obsidian/writer.py)
+   -----------------------------------------------------------------------------
+   Function: delete_note(vault_path, note_path, permanent=False)
+   Line: ~189
+   What: MOVE to .trash/ (soft-delete) or DELETE (permanent)
+   Why: Note removal with safety default (soft-delete)
+   SAFETY: Defaults to soft-delete (permanent=False)
+
+2. File Indexer (kb/indexer.py)
+   -----------------------------------------------------------------------------
+   Function: delete_file(file_id)
+   Line: ~312 (same as above)
+   What: DELETE with CASCADE
+   Why: Referential integrity - removes all related sections/keywords
+
+3. ChromaDB Integration (kb/library/knowledge_base/chroma_integration.py)
+   -----------------------------------------------------------------------------
+   Function: delete_by_file_id(file_id)
+   Line: ~198 (same as above)
+   What: DELETE vectors
+   Why: Cleanup when source file removed
+
+4. ChromaDB Plugin (kb/library/knowledge_base/chroma_plugin.py)
+   -----------------------------------------------------------------------------
+   Function: delete_by_ids(ids)
+   Line: ~178
+   What: DELETE specific vectors by ID
+   Why: Orphan cleanup during sync
+
+5. Sync Script (kb/scripts/sync_chroma.py)
+   -----------------------------------------------------------------------------
+   Function: sync_execute() - orphan removal
+   Line: ~98
+   What: DELETE orphans from ChromaDB
+   Why: Removes embeddings for deleted source files
+
+6. KB Ops Script (kb/scripts/kb_ops.sh)
+   -----------------------------------------------------------------------------
+   Function: cmd_restore() - rm -rf
+   Line: ~67
+   What: rm -rf on CHROMA_PATH before restore
+   Why: Clean replacement during restore
+   SAFETY: Interactive confirmation required
+   
+   Function: cmd_backup() - cleanup
+   Line: ~52
+   What: rm -rf on old backups
+   Why: Retention policy (keeps last 10, deletes >7 days)
+
+================================================================================
+SAFETY MEASURES
+================================================================================
+
+1. Soft-Delete Default
+   - Obsidian delete_note() defaults to moving to .trash/
+   - Prevents accidental permanent deletion
+
+2. Interactive Confirmation
+   - kb_ops.sh restore requires user confirmation
+   - Prevents accidental overwrites
+
+3. Scoped Operations
+   - All writes are scoped to:
+     * User-specified library/ directory
+     * User-specified Obsidian vault path
+     * ~/.openclaw/kb/ for internal data
+   - No arbitrary filesystem access
+
+4. Database CASCADE
+   - Foreign keys with ON DELETE CASCADE
+   - Maintains referential integrity automatically
+
+5. Dry-Run Modes
+   - sync_chroma.py --dry-run shows changes without applying
+   - Allows preview before execution
+
+================================================================================
+RECOMMENDATIONS FOR USERS
+================================================================================
+
+Before using write/delete features:
+
+1. BACKUP your data:
+   $ ./kb/scripts/kb_ops.sh backup
+
+2. Test with --dry-run first:
+   $ python3 -m kb.scripts.sync_chroma --dry-run
+
+3. Review the specific functions above if concerned about operations
+
+4. For read-only usage:
+   - Use index_file() without delete_file()
+   - Use search/query without writer functions
+   - Skip kb_ops.sh, use migrate.py only for schema
+
+================================================================================
