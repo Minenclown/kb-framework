@@ -40,7 +40,7 @@
 
 | # | Feature | Problem | Lösung | Aufwand |
 |---|---------|---------|--------|---------|
-| 3 | OCR GPU Support | EasyOCR ist langsam (~30s/PDF) | GPU-Flag in config.py, Tesseract-Alternative | ~1h |
+| 3 | OCR Config | Tesseract ist Standard (CPU), EasyOCR optional (GPU) | Config-Flag für OCR-Engine (`tesseract` vs `easyocr`) | ~1h |
 | 4 | ChromaDB Warmup Script | Cold-Start 3.2s beim ersten Embedding | Automatisches Modell-Preloading bei Boot | ~30min |
 | 5 | Delta-Indexierung | Re-Indexierung von allen Files bei Änderung | Timestamp-Check: nur geänderte Files | ~2h |
 
