@@ -65,7 +65,25 @@ hs = HybridSearch()
 results = hs.search("Your search term", limit=10)
 ```
 
-### CLI
+### CLI (Recommended)
+
+The built-in `kb` command provides easy access:
+
+```bash
+# Add to .bashrc for global access:
+alias kb="/path/to/kb-framework/kb.sh"
+
+# Commands:
+kb index /path/to/file.md        # Index a file
+kb search "machine learning"     # Search knowledge base
+kb stats                         # Show statistics
+kb update                        # Check for updates
+kb audit                         # Run full audit
+kb ghost                         # Find orphaned entries
+kb warmup                        # Preload ChromaDB model
+```
+
+### Legacy Python Scripts
 
 ```bash
 # Index a new file
