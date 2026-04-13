@@ -2,6 +2,9 @@
 *.db
 *.db.backup
 
+# Production data (library/ content)
+library/biblio.db
+
 # ChromaDB Vektoren
 chroma_db/
 .knowledge/chroma_db/

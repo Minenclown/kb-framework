@@ -1,26 +1,19 @@
 # KB Framework Requirements
-# Install: pip install -r requirements.txt
 
-# ============================================================
-# CORE (required for basic operation)
-# ============================================================
-chromadb>=1.5.0          # Vector database
-sentence-transformers>=2.0.0  # Embeddings
-pypdf>=4.0.0              # PDF text extraction
+# Core dependencies
+chromadb>=0.4.0
+sentence-transformers>=2.0.0
 
-# ============================================================
-# OPTIONAL OCR (for image-based PDFs)
-# ============================================================
-# Option A: Tesseract (recommended - CPU only, ~100MB)
-#   apt install: tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
-#   Then install Python binding:
-pytesseract>=0.3.10       # pip install pytesseract
+# PDF processing
+PyMuPDF>=1.23.0
 
-# Option B: EasyOCR (GPU recommended, ~2GB)
-# easyocr>=1.7.0
-# torch>=2.0.0  # Only if using EasyOCR
+# OCR
+easyocr>=1.7.0
 
-# ============================================================
-# OPTIONAL (enhances functionality)
-# ============================================================
-# pip install pymupdf  # Alternative PDF, already in core
+# ML/Torch
+torch>=2.0.0
+numpy
+tqdm
+
+# Utils
+requests

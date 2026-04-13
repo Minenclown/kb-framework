@@ -11,9 +11,12 @@ import os
 from pathlib import Path
 from datetime import datetime
 import csv
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import DB_PATH
 
 # Konfiguration
-DB_PATH = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
 LIBRARY_PATH = Path.home() / "knowledge" / "library"
 OUTPUT_DIR = Path.home() / "knowledge" / "library" / "audit"
 OUTPUT_ORPHANED = OUTPUT_DIR / "orphaned_entries.csv"
