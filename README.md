@@ -1,10 +1,8 @@
 # KB Framework
 
-![Tests](https://img.shields.io/badge/tests-153%20passed-brightgreen)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![ChromaDB](https://img.shields.io/badge/chromadb-0.4+-red)
-![Obsidian](https://img.shields.io/badge/obsidian-ready-purple)
 
 **Knowledge Base Framework with ChromaDB, Hybrid Search and Obsidian Vault Support.**
 
