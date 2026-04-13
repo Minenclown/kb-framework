@@ -99,3 +99,16 @@ kb_framework/
 ## License
 
 MIT License - see [LICENSE](LICENSE)
+
+## Known Issues
+
+### Database
+- **NULL file_path**: Historisch gab es Sections ohne file_path. Fixed in recent commits.
+- **ChromaDB Sync**: Bei Re-Indexing können Diskrepanzen entstehen. Use `kb_full_audit.py` to check.
+
+### Performance
+- **Embedding Generation**: First run is slow (downloads sentence-transformers model).
+- **OCR**: EasyOCR is slow on large PDFs (~30s/page).
+
+### Development
+- See `FIX_PLAN.md` for planned improvements.

@@ -182,9 +182,59 @@ def update_log(path_count: int, orphan_count: int):
         f.write(f"- Pfad-Probleme: {path_count}\n")
         f.write(f"- Verwaiste Einträge: {orphan_count}\n")
 
+# Neue Funktionen (vor main() definiert)
+def check_null_file_paths(conn):
+    """Findet file_sections mit NULL file_path."""
+    cursor = conn.execute(
+        "SELECT COUNT(*) FROM file_sections WHERE file_path IS NULL OR file_path = ''"
+    )
+    count = cursor.fetchone()[0]
+    if count > 0:
+        print(f"⚠️  {count} sections with NULL file_path")
+    return count
+
+def check_embeddings_table(conn):
+    """Prüft ob embeddings Tabelle existiert und Daten hat."""
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings'"
+    )
+    if not cursor.fetchone():
+        print("❌ embeddings table missing")
+        return False
+    
+    cursor = conn.execute("SELECT COUNT(*) FROM embeddings")
+    count = cursor.fetchone()[0]
+    print(f"✅ embeddings table: {count} entries")
+    return True
+
+def check_chroma_sqlite_sync(conn, chroma_path):
+    """Vergleicht ChromaDB mit SQLite."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from library.knowledge_base.chroma_integration import ChromaIntegration
+    
+    try:
+        chroma = ChromaIntegration(chroma_path=chroma_path)
+        chroma_count = chroma.sections_collection.count()
+        
+        cursor = conn.execute("SELECT COUNT(*) FROM file_sections WHERE file_path IS NOT NULL")
+        sqlite_count = cursor.fetchone()[0]
+        
+        if chroma_count != sqlite_count:
+            print(f"⚠️  Sync issue: SQLite={sqlite_count}, ChromaDB={chroma_count}")
+        else:
+            print(f"✅ Sync OK: {sqlite_count} entries")
+        return chroma_count == sqlite_count
+    except Exception as e:
+        print(f"❌ ChromaDB check failed: {e}")
+        return False
+
 def main():
     log("Start: KB Full Audit")
     init_output_dir()
+    
+    # Connection für erweiterte Checks
+    conn = sqlite3.connect(str(DB_PATH))
     
     # DB-Integrität
     log("Prüfe DB-Integrität...")
@@ -194,6 +244,19 @@ def main():
     # Pfad-Check
     log("Prüfe Library-Pfade...")
     path_issues = check_library_paths()
+    
+    # Neue erweiterte Checks
+    log("Prüfe NULL file_paths...")
+    null_paths = check_null_file_paths(conn)
+    
+    log("Prüfe embeddings Tabelle...")
+    check_embeddings_table(conn)
+    
+    log("Prüfe ChromaDB/SQLite Sync...")
+    chroma_path = str(DB_PATH).replace('/library/biblio.db', '/chroma_db')
+    check_chroma_sqlite_sync(conn, chroma_path)
+    
+    conn.close()
     
     # Verwaiste Einträge
     log("Suche verwaiste Einträge...")
