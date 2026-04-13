@@ -147,20 +147,20 @@ python -m pytest tests/ -v
 │       ├── kb_ghost_scanner.py
 │       ├── kb_full_audit.py
 │       └── kb_warmup.py
-├── library/                       # 📚 Your content lives here
+├── library/                       # Your content lives here
 │   ├── content/                  # Raw files (PDFs, docs, logs)
 │   │   ├── Gesundheit/
 │   │   ├── Projekte/
-│   │   └── ...
+│   │   └── (your folders)
 │   └── agent/                    # Markdown files for agents
 │       ├── projektplanung/
 │       ├── memory/
 │       ├── Workflow_Referenzen/
-│       └── ...
+│       └── (your folders)
 ├── chroma_db/                     # ChromaDB vector database
 ├── knowledge.db                   # Main SQLite database
 ├── kb.sh                         # CLI wrapper script
-├── tests/                        # 153 Tests
+├── tests/                        # Test suite
 ├── README.md
 ├── LICENSE
 └── requirements.txt
@@ -182,7 +182,7 @@ MIT License - see [LICENSE](LICENSE)
 
 ### Performance
 - **Embedding Generation**: First run is slow (downloads sentence-transformers model).
-- **OCR**: EasyOCR is slow on large PDFs (~30s/page).
+- **OCR**: Tesseract (Standard, CPU-optimiert), EasyOCR (optional, GPU-recommended).
 
 ### Development
 - See `UPDATE_GOALS.md` for planned improvements.

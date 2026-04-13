@@ -30,12 +30,12 @@ __registry__ = {
         "chromadb>=0.4.0",
         "sentence-transformers>=2.0.0",
         "PyMuPDF>=1.23.0",
-        "easyocr>=1.7.0",
         "torch>=2.0.0",
         "numpy",
         "tqdm",
     ],
     "optional": [
+        "easyocr>=1.7.0",  # Optional: EasyOCR for GPU-accelerated OCR
         "obsidian-api",  # For Obsidian integration
     ],
     "env": {
