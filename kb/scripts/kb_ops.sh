@@ -1,6 +1,15 @@
 #!/bin/bash
 # KB Operations Script - Backup, Restore, and Maintenance
 
+# ===== DRY RUN FLAG =====
+DRY_RUN=false
+case "$1" in
+    --dry-run)
+        DRY_RUN=true
+        shift
+        ;;
+esac
+
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,6 +38,12 @@ error() {
 
 # ===== BACKUP =====
 cmd_backup() {
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would create backup: kb_backup_$(date +%Y%m%d_%H%M%S)"
+        echo "[DRY-RUN] Would backup: $DB_PATH and $CHROMA_PATH"
+        return
+    fi
+    
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local backup_name="kb_backup_${timestamp}"
     local backup_path="${BACKUP_DIR}/${backup_name}"
@@ -69,6 +84,11 @@ cmd_backup() {
 
 # ===== RESTORE =====
 cmd_restore() {
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would restore from backup: $1"
+        return
+    fi
+    
     local backup_name="$1"
     
     if [ -z "$backup_name" ]; then
@@ -111,18 +131,33 @@ cmd_restore() {
 
 # ===== MIGRATE =====
 cmd_migrate() {
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would run database migrations"
+        return
+    fi
+    
     log "Running database migrations..."
     python3 -m kb.scripts.migrate --execute
 }
 
 # ===== SYNC =====
 cmd_sync() {
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would sync ChromaDB with SQLite"
+        return
+    fi
+    
     log "Syncing ChromaDB with SQLite..."
     python3 -m kb.scripts.sync_chroma --execute
 }
 
 # ===== AUDIT =====
 cmd_audit() {
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY-RUN] Would run full KB audit"
+        return
+    fi
+    
     log "Running KB audit..."
     python3 kb/scripts/kb_full_audit.py
 }

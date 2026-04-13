@@ -10,12 +10,15 @@ mkdir -p ~/.knowledge/chroma_db/
 mkdir -p ~/.knowledge/backup/
 
 echo "📦 Installiere System-Dependencies (Tesseract OCR)..."
-# Tesseract OCR für PDF-Indexierung
-if command -v apt-get &> /dev/null; then
+# Check if tesseract is already installed
+if ! command -v tesseract &> /dev/null; then
+    echo "Installing tesseract-ocr..."
     sudo apt-get update -qq
     sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng 2>/dev/null || \
     apt-get install -y tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng 2>/dev/null || \
     echo "⚠️  Tesseract installation skipped (no sudo)"
+else
+    echo "tesseract-ocr is already installed"
 fi
 
 echo "📦 Installiere Python-Dependencies..."

@@ -29,7 +29,7 @@ cp kb-framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
 
 ### 2. Install Dependencies
 ```bash
-pip install chromadb
+pip install -r requirements.txt
 ```
 
 ### 3. Initialize Database
@@ -41,13 +41,7 @@ python3 ~/.openclaw/workspace/kb-framework/kb/indexer.py --init
 
 ## Configuration
 
-### Adjust Paths (in `kb/indexer.py`)
-```python
-# Line ~15
-DB_PATH = "/home/user/knowledge/knowledge.db"
-CHROMA_PATH = "/home/user/.knowledge/chroma_db/"
-LIBRARY_PATH = "/home/user/knowledge/library/"
-```
+Set environment variable KB_DB_PATH or edit kb/config.py
 
 ---
 
