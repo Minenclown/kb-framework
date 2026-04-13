@@ -29,7 +29,7 @@ cp kb_framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
 
 ### 2. Abhängigkeiten installieren
 ```bash
-pip install chromadb sqlite3
+pip install chromadb
 ```
 
 ### 3. Datenbank initialisieren

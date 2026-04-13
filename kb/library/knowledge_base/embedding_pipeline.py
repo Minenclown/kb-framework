@@ -106,6 +106,13 @@ class EmbeddingPipeline:
         
         logger.info(f"EmbeddingPipeline init: db={self.db_path}")
     
+    def get_embedding_hash(self, embedding) -> str:
+        """Berechnet SHA256-Hash eines Embedding-Vektors."""
+        import hashlib
+        import json
+        vec_str = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
+        return hashlib.sha256(vec_str.encode()).hexdigest()
+    
     # -------------------------------------------------------------------------
     # Cache Management
     # -------------------------------------------------------------------------
@@ -362,6 +369,25 @@ class EmbeddingPipeline:
                 metadatas=metadatas,
                 documents=documents
             )
+            
+            # Track embeddings in SQLite
+            if self.db_path:
+                with sqlite3.connect(str(self.db_path)) as track_conn:
+                    for section_id in ids:
+                        # Get file_id
+                        cur = track_conn.execute(
+                            "SELECT file_id FROM file_sections WHERE id = ?",
+                            (section_id,)
+                        )
+                        row = cur.fetchone()
+                        file_id = row[0] if row else None
+                        
+                        track_conn.execute("""
+                            INSERT OR REPLACE INTO embeddings 
+                            (section_id, file_id, model, dimension, created_at)
+                            VALUES (?, ?, 'all-MiniLM-L6-v2', 384, CURRENT_TIMESTAMP)
+                        """, (section_id, file_id))
+            
             logger.info(f"Upserted {successful} sections to ChromaDB")
         
         return successful

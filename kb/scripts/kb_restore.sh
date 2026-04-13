@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/.openclaw/kb/backup}"
 KB_DB="${KB_DB:-$HOME/.openclaw/kb/library/biblio.db}"
-CHROMA_DB="${CHROMA_DB:-$HOME/.openclaw/kb/.knowledge/chroma_db}"
+CHROMA_DB="${CHROMA_DB:-$HOME/.openclaw/kb/library/chroma_db}"
 
 # Usage
 usage() {

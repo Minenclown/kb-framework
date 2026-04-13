@@ -273,9 +273,29 @@ class BiblioIndexer:
 
         self.indexer = MarkdownIndexer(db_path)
         self.conn = sqlite3.connect(db_path)
-        self.conn.execute("PRAGMA foreign_keys = ON")
-        self.conn.execute("PRAGMA foreign_key_check")  # Verify FK mode
+        cursor = self.conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("PRAGMA foreign_key_check")  # Verify FK mode
         self.conn.row_factory = sqlite3.Row
+
+        # Create embeddings tracking table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS embeddings (
+                id INTEGER PRIMARY KEY,
+                section_id TEXT UNIQUE NOT NULL,
+                file_id TEXT,
+                model TEXT DEFAULT 'all-MiniLM-L6-v2',
+                dimension INTEGER DEFAULT 384,
+                embedding_hash TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (section_id) REFERENCES file_sections(id) ON DELETE CASCADE,
+                FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_embeddings_section_id ON embeddings(section_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_embeddings_file_id ON embeddings(file_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_embeddings_hash ON embeddings(embedding_hash)")
+        self.conn.commit()
 
     def __enter__(self):
         """Context-Manager Entry."""
@@ -332,6 +352,13 @@ class BiblioIndexer:
         except Exception as e:
             logger.error(f"⚠️  Fehler beim Entfernen: {e}")
             return False
+
+    def get_embedding_hash(self, embedding) -> str:
+        """Berechnet SHA256-Hash eines Embedding-Vektors."""
+        import hashlib
+        import json
+        vec_str = json.dumps(embedding.tolist() if hasattr(embedding, 'tolist') else embedding)
+        return hashlib.sha256(vec_str.encode()).hexdigest()
 
     def close(self):
         """Schließe Datenbank-Verbindung."""

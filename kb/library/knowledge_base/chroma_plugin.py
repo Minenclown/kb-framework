@@ -345,6 +345,24 @@ class ChromaDBPlugin:
                     documents=documents
                 )
                 
+                # Write tracking info to embeddings table
+                if self.db_path and batch:
+                    with sqlite3.connect(str(self.db_path)) as track_conn:
+                        for task in batch:
+                            # Get file_id from section_id
+                            cur = track_conn.execute(
+                                "SELECT file_id FROM file_sections WHERE id = ?", 
+                                (task.section_id,)
+                            )
+                            row = cur.fetchone()
+                            file_id = row[0] if row else None
+                            
+                            track_conn.execute("""
+                                INSERT OR REPLACE INTO embeddings 
+                                (section_id, file_id, model, dimension, created_at)
+                                VALUES (?, ?, 'all-MiniLM-L6-v2', 384, CURRENT_TIMESTAMP)
+                            """, (task.section_id, file_id))
+                
                 processed += len(batch)
                 logger.info(f"Batch {i // self.batch_size + 1}: {len(batch)} sections embedded")
                 
