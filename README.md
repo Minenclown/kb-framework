@@ -159,6 +159,7 @@ python -m pytest tests/ -v
 ├── knowledge.db                   # Main SQLite database
 ├── kb.sh                         # CLI wrapper script
 ├── tests/                        # Test suite
+├── UPDATE_GOALS.md               # Development roadmap
 ├── README.md
 ├── LICENSE
 └── requirements.txt
