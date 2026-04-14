@@ -31,6 +31,8 @@ kb update                       # Check for updates
 - **Embedding Pipeline** - Flexible embedding generation
 - **Auto-Update** - Built-in updater like `openclaw update`
 
+> 📖 **For database details:** See [HOW_TO_DB.md](HOW_TO_DB.md) - Understanding reference quality and optimization
+
 ### Obsidian Integration
 - **Parser** - WikiLinks, Tags, Frontmatter, Embeds
 - **Resolver** - Path resolution with shortest-match algorithm
