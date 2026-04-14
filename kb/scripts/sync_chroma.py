@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ChromaDB Sync Tool - Synchronisiert SQLite mit ChromaDB."""
+"""ChromaDB Sync Tool - Synchronizes SQLite with ChromaDB."""
 
 import argparse
 import sqlite3
@@ -14,8 +14,8 @@ from config import CHROMA_PATH, DB_PATH
 
 
 def get_sqlite_sections(conn):
-    """Holt alle Section IDs aus SQLite."""
-    # file_sections hat: id (INTEGER), file_id (INTEGER), section_header, section_content
+    """Get all section IDs from SQLite."""
+    # file_sections has: id (INTEGER), file_id (INTEGER), section_header, section_content
     cursor = conn.execute(
         "SELECT id, file_id FROM file_sections"
     )
@@ -23,18 +23,18 @@ def get_sqlite_sections(conn):
 
 
 def get_chroma_sections(chroma_path):
-    """Holt alle Section IDs aus ChromaDB."""
+    """Get all section IDs from ChromaDB."""
     try:
         chroma = ChromaIntegration(chroma_path=chroma_path)
         results = chroma.sections_collection.get(include=[])
         return set(results['ids'])
     except Exception as e:
-        print(f"❌ ChromaDB Fehler: {e}")
+        print(f"❌ ChromaDB Error: {e}")
         return set()
 
 
 def sync_stats(conn, chroma_path):
-    """Zeigt Sync-Statistiken."""
+    """Show sync statistics."""
     sqlite_sections = get_sqlite_sections(conn)
     chroma_sections = get_chroma_sections(chroma_path)
     
@@ -44,7 +44,7 @@ def sync_stats(conn, chroma_path):
     missing_from_chroma = set(sqlite_sections.keys()) - chroma_sections
     orphans_in_chroma = chroma_sections - set(sqlite_sections.keys())
     
-    print(f"📊 Sync Statistiken")
+    print(f"📊 Sync Statistics")
     print(f"  SQLite Sections:   {sqlite_count}")
     print(f"  ChromaDB Sections: {chroma_count}")
     print(f"  Coverage:          {chroma_count/max(sqlite_count,1)*100:.1f}%")
@@ -55,43 +55,43 @@ def sync_stats(conn, chroma_path):
 
 
 def sync_dry_run(conn, chroma_path):
-    """Zeigt was synchronisiert werden würde."""
+    """Show what would be synchronized."""
     missing, orphans = sync_stats(conn, chroma_path)
     
     if missing:
-        print(f"\n📥 Würde zu ChromaDB hinzufügen: {len(missing)} sections")
+        print(f"\n📥 Would add to ChromaDB: {len(missing)} sections")
     
     if orphans:
-        print(f"\n🗑️  Würde aus ChromaDB entfernen: {len(orphans)} orphans")
+        print(f"\n🗑️  Would remove from ChromaDB: {len(orphans)} orphans")
     
     if not missing and not orphans:
-        print(f"\n✅ Alles synchronisiert!")
+        print(f"\n✅ All synchronized!")
 
 
 def sync_execute(conn, chroma_path):
-    """Führt die Synchronisation durch."""
+    """Execute the synchronization."""
     missing, orphans = sync_stats(conn, chroma_path)
     
     if missing:
-        print(f"\n📥 Füge {len(missing)} Sections zu ChromaDB hinzu...")
-        # TODO: EmbeddingPipeline verwenden um fehlende zu embedden
-        print(f"   (Hier würde EmbeddingPipeline.embed_sections() aufgerufen)")
+        print(f"\n📥 Adding {len(missing)} sections to ChromaDB...")
+        # TODO: Use EmbeddingPipeline to embed missing sections
+        print(f"   (Here EmbeddingPipeline.embed_sections() would be called)")
     
     if orphans:
-        print(f"\n🗑️  Entferne {len(orphans)} Orphans aus ChromaDB...")
+        print(f"\n🗑️  Removing {len(orphans)} orphans from ChromaDB...")
         chroma = ChromaIntegration(chroma_path=chroma_path)
         chroma.sections_collection.delete(ids=list(orphans))
-        print(f"   ✅ {len(orphans)} orphans entfernt")
+        print(f"   ✅ {len(orphans)} orphans removed")
     
     if not missing and not orphans:
-        print(f"\n✅ Alles bereits synchronisiert!")
+        print(f"\n✅ Already synchronized!")
 
 
 def main():
     parser = argparse.ArgumentParser(description='ChromaDB Sync Tool')
-    parser.add_argument('--stats', action='store_true', help='Nur Statistiken anzeigen')
-    parser.add_argument('--dry-run', action='store_true', help='Simulation ohne Änderungen')
-    parser.add_argument('--execute', action='store_true', help='Synchronisation ausführen')
+    parser.add_argument('--stats', action='store_true', help='Show statistics only')
+    parser.add_argument('--dry-run', action='store_true', help='Simulation without changes')
+    parser.add_argument('--execute', action='store_true', help='Execute synchronization')
     
     args = parser.parse_args()
     

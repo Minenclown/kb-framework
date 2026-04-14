@@ -234,7 +234,7 @@ class ChromaIntegration:
         try:
             collection = self.client.get_collection(name=collection_name)
             
-            # Query alle IDs mit passender file_id in Metadaten
+            # Query all IDs with matching file_id in metadata
             results = collection.get(where={"file_id": file_id})
             
             if not results or not results.get('ids'):

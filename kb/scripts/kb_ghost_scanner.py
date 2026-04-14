@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-KB Ghost Scanner – Findet neue Dateien die nicht in KB indexiert sind
+KB Ghost Scanner – Finds new files that are not indexed in KB
 
-Laufzeit: Montag-Freitag 02:00 Uhr (via Cron)
-Zweck: Neue Dateien finden und zur KB hinzufügen
+Runtime: Monday-Friday 02:00 AM (via Cron)
+Purpose: Find new files and add them to KB
 
-Phase 2.3: Erweiterte Extensions + Inkrementelles Scannen
-- Extensions: .doc, .docx, .epub hinzugefügt
-- Rekursives Scannen tiefer in Unterordner
-- Inkrementeller Scan mit Cache
+Phase 2.3: Extended Extensions + Incremental Scanning
+- Extensions: .doc, .docx, .epub added
+- Recursive scanning deeper into subdirectories
+- Incremental scan with cache
 """
 
 import sqlite3
@@ -18,7 +18,7 @@ from pathlib import Path
 from datetime import datetime
 import csv
 
-# Konfiguration
+# Configuration
 DB_PATH = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
 LIBRARY_PATH = Path.home() / "knowledge" / "library"
 OUTPUT_DIR = Path.home() / "knowledge" / "library" / "audit"
@@ -26,44 +26,44 @@ OUTPUT_FILE = OUTPUT_DIR / "ghost_files.csv"
 LOG_FILE = OUTPUT_DIR / "audit_log.md"
 CACHE_FILE = Path.home() / ".knowledge" / "ghost_cache.json"
 
-# Zu überwachende Verzeichnisse
+# Directories to monitor
 SCAN_DIRS = [
     LIBRARY_PATH,
     Path.home() / ".openclaw" / "workspace",
     Path.home() / "knowledge" / "library" / "Gesundheit",
 ]
 
-# Phase 2.3: Erweiterte Datei-Extensions (mit Warnung für nicht direkt indexierbare)
+# Phase 2.3: Extended file extensions (with warning for non-directly indexable)
 INDEXABLE_EXTENSIONS = {
-    # Dokumente (direkt indexierbar)
+    # Documents (directly indexable)
     '.pdf', '.txt', '.md', '.html', '.xml',
-    # Office (Indexierbar mit Warnung)
+    # Office (Indexable with warning)
     '.doc', '.docx', '.odt', '.rtf',
     # E-Books
     '.epub', '.mobi', '.azw3',
-    # Bilder (für OCR-Queue)
+    # Images (for OCR queue)
     '.jpg', '.jpeg', '.png', '.tiff', '.webp',
     # Code
     '.py', '.sh', '.js', '.ts', '.java', '.c', '.cpp', '.go',
     # Data
     '.json', '.yaml', '.yml', '.csv', '.tsv',
-    # Andere
+    # Other
     '.log', '.rst', '.tex',
 }
 
-# Warnung bei diesen Extensions (brauchen externe Tools)
+# Warning for these extensions (need external tools)
 EXTERNAL_TOOL_EXTENSIONS = {'.doc', '.docx', '.odt', '.rtf', '.epub', '.mobi', '.azw3'}
 
 def log(message: str):
-    """Loggt eine Nachricht"""
+    """Log a message"""
     print(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {message}")
 
 def init_output_dir():
-    """Erstellt Output-Verzeichnis wenn nötig"""
+    """Create output directory if needed"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_indexed_files() -> set:
-    """Holt alle in KB indexierte Dateien"""
+    """Get all files indexed in KB"""
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.execute("SELECT DISTINCT file_path FROM files WHERE file_path IS NOT NULL")
     indexed = {row[0] for row in cursor.fetchall()}
@@ -71,7 +71,7 @@ def get_indexed_files() -> set:
     return indexed
 
 def load_cache() -> dict:
-    """Lädt gecachte Datei-Hashes für inkrementelles Scannen"""
+    """Load cached file hashes for incremental scanning"""
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     if CACHE_FILE.exists():
         try:
@@ -82,14 +82,14 @@ def load_cache() -> dict:
     return {}
 
 def save_cache(cache: dict):
-    """Speichert Cache"""
+    """Save cache"""
     with open(CACHE_FILE, 'w') as f:
         json.dump(cache, f, indent=2)
 
 def should_scan_file(file_path: Path, cache: dict, incremental: bool) -> bool:
     """
-    Prüfe ob Datei seit letztem Scan geändert.
-    Phase 2.3: Inkrementelles Scannen.
+    Check if file has changed since last scan.
+    Phase 2.3: Incremental scanning.
     """
     if not incremental:
         return True
@@ -105,11 +105,11 @@ def should_scan_file(file_path: Path, cache: dict, incremental: bool) -> bool:
 
 def scan_for_files(incremental: bool = True) -> list[Path]:
     """
-    Scannt alle Verzeichnisse nach indexierbaren Dateien.
+    Scan all directories for indexable files.
     
     Phase 2.3: 
-    - Rekursives Scannen (rglob statt glob)
-    - Inkrementelles Scannen mit Cache
+    - Recursive scanning (rglob instead of glob)
+    - Incremental scanning with cache
     """
     files = []
     cache = load_cache() if incremental else {}
@@ -117,12 +117,12 @@ def scan_for_files(incremental: bool = True) -> list[Path]:
     
     for scan_dir in SCAN_DIRS:
         if not scan_dir.exists():
-            log(f"WARN: Verzeichnis existiert nicht: {scan_dir}")
+            log(f"WARN: Directory does not exist: {scan_dir}")
             continue
         
-        # Phase 2.3: rglob für rekursives Scannen in Unterordnern
+        # Phase 2.3: rglob for recursive scanning in subdirectories
         for ext in INDEXABLE_EXTENSIONS:
-            for f in scan_dir.rglob(f"*{ext}"):  # rglob statt glob
+            for f in scan_dir.rglob(f"*{ext}"):  # rglob instead of glob
                 # Skip if should be skipped in incremental mode
                 if not should_scan_file(f, cache, incremental):
                     continue
@@ -140,7 +140,7 @@ def scan_for_files(incremental: bool = True) -> list[Path]:
     return files
 
 def find_ghost_files(indexed: set, files: list[Path]) -> list[dict]:
-    """Findet Dateien die nicht in KB sind"""
+    """Find files that are not in KB"""
     ghost_files = []
     for f in files:
         str_path = str(f)
@@ -153,18 +153,18 @@ def find_ghost_files(indexed: set, files: list[Path]) -> list[dict]:
     return ghost_files
 
 def save_ghost_files(ghost_files: list[dict]):
-    """Speichert Ghost-Dateien als CSV"""
+    """Save ghost files as CSV"""
     with open(OUTPUT_FILE, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=['path', 'size', 'modified'])
         writer.writeheader()
         writer.writerows(ghost_files)
-    log(f"Gefunden: {len(ghost_files)} Ghost-Dateien")
+    log(f"Found: {len(ghost_files)} ghost files")
 
 def update_log(ghost_count: int):
-    """Aktualisiert das Audit-Log"""
+    """Update audit log"""
     with open(LOG_FILE, 'a') as f:
         f.write(f"\n## {datetime.now():%Y-%m-%d} (Ghost-Scan)\n")
-        f.write(f"- Ghost-Dateien gefunden: {ghost_count}\n")
+        f.write(f"- Ghost files found: {ghost_count}\n")
 
 def main(incremental: bool = True):
     log("Start: KB Ghost Scanner")
@@ -174,10 +174,10 @@ def main(incremental: bool = True):
     log(f"Mode: {mode}")
     
     indexed = get_indexed_files()
-    log(f"Indexierte Dateien in KB: {len(indexed)}")
+    log(f"Indexed files in KB: {len(indexed)}")
     
     files = scan_for_files(incremental=incremental)
-    log(f"Gescannte Dateien (neu/geändert): {len(files)}")
+    log(f"Scanned files (new/changed): {len(files)}")
     
     ghost_files = find_ghost_files(indexed, files)
     
@@ -188,14 +188,14 @@ def main(incremental: bool = True):
     if ghost_files:
         save_ghost_files(ghost_files)
         update_log(len(ghost_files))
-        log(f"Ghost-Dateien gefunden: {len(ghost_files)}")
-        log(f"CSV gespeichert: {OUTPUT_FILE}")
+        log(f"Ghost files found: {len(ghost_files)}")
+        log(f"CSV saved: {OUTPUT_FILE}")
         if external_count > 0:
-            log(f"⚠️  {external_count} Dateien brauchen externe Tools (docx, epub, etc.)")
+            log(f"⚠️  {external_count} files need external tools (docx, epub, etc.)")
     else:
-        log("Keine Ghost-Dateien gefunden")
+        log("No ghost files found")
     
-    log("Fertig: KB Ghost Scanner")
+    log("Done: KB Ghost Scanner")
 
 if __name__ == "__main__":
     import argparse

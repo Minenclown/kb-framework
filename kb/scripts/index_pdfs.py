@@ -5,7 +5,7 @@ Extracts text from PDF files (including image-based PDFs via OCR) and creates
 temporary markdown files for indexing.
 
 Phase 2.1: ChromaDB Integration
-Phase 2.2: OCR-Parallelisierung (ThreadPoolExecutor)
+Phase 2.2: OCR-Parallelization (ThreadPoolExecutor)
 """
 
 import sys
@@ -34,16 +34,16 @@ except ImportError:
 
 class TesseractOCR:
     """
-    Tesseract OCR - Alternative zu EasyOCR.
+    Tesseract OCR - Alternative to EasyOCR.
     
-    Vorteile:
-    - Schneller als EasyOCR
-    - Braucht kein GPU
-    - Bessere accuracy bei sauberen Dokumenten
+    Advantages:
+    - Faster than EasyOCR
+    - No GPU needed
+    - Better accuracy on clean documents
     
-    Benötigt:
-    - tesseract installiert (apt install tesseract-ocr)
-    - Deutsche/Englische Sprachdateien (deu-eng.traineddata)
+    Requires:
+    - tesseract installed (apt install tesseract-ocr)
+    - German/English language files (deu-eng.traineddata)
     """
     
     _available = None
@@ -51,7 +51,7 @@ class TesseractOCR:
     
     @classmethod
     def is_available(cls) -> bool:
-        """Prüft ob Tesseract installiert ist."""
+        """Check if Tesseract is installed."""
         if cls._available is None:
             try:
                 result = subprocess.run(
@@ -73,7 +73,7 @@ class TesseractOCR:
     
     @classmethod
     def get_version(cls) -> str:
-        """Gibt Tesseract Version zurück."""
+        """Return Tesseract version."""
         cls.is_available()  # Ensure _version is set
         return cls._version or 'not installed'
     
@@ -83,10 +83,10 @@ class TesseractOCR:
         Run Tesseract OCR on an image file.
         
         Args:
-            image_path: Pfad zum Bild
+            image_path: Path to image
             
         Returns:
-            Extrahierter Text
+            Extracted text
         """
         if not cls.is_available():
             raise RuntimeError("Tesseract is not installed")
@@ -178,13 +178,13 @@ class OCRProcessor:
     """
     OCR processing with support for both EasyOCR and Tesseract.
     
-    Preferenz-Reihenfolge:
-    1. Tesseract (wenn verfügbar - schneller, genauer)
+    Preference order:
+    1. Tesseract (if available - faster, more accurate)
     2. EasyOCR (Fallback)
     
     Usage:
-        OCRProcessor.pdf_pages_to_text(pdf_path)  # Automatische Auswahl
-        OCRProcessor.use_tesseract = True  # Tesseract erzwingen
+        OCRProcessor.pdf_pages_to_text(pdf_path)  # Automatic selection
+        OCRProcessor.use_tesseract = True  # Force Tesseract
     """
     
     _reader = None
@@ -193,7 +193,7 @@ class OCRProcessor:
     
     @classmethod
     def _check_gpu(cls) -> bool:
-        """Prüfe ob GPU verfügbar."""
+        """Check if GPU is available."""
         if cls._gpu_available is None:
             try:
                 import torch
@@ -217,9 +217,9 @@ class OCRProcessor:
         """
         Run OCR on an image file.
         
-        Automatische OCR-Engine Auswahl:
-        - Tesseract wenn verfügbar (bevorzugt)
-        - EasyOCR als Fallback
+        Automatic OCR engine selection:
+        - Tesseract if available (preferred)
+        - EasyOCR as fallback
         
         detail: 0 = list of strings, 1 = list of tuples (bbox, text, conf)
         """
@@ -258,9 +258,9 @@ class OCRProcessor:
         """
         Convert PDF pages to images and run OCR.
         
-        Automatische Engine-Auswahl:
-        - Tesseract (wenn verfügbar): Schneller, besser für Dokumente
-        - EasyOCR (Fallback): Für Bilder und komplexe Layouts
+        Automatic engine selection:
+        - Tesseract (if available): Faster, better for documents
+        - EasyOCR (Fallback): For images and complex layouts
         """
         # Determine which OCR engine to use
         if cls.use_tesseract or TesseractOCR.is_available():
@@ -326,10 +326,10 @@ class PDFIndexer:
     CHROMA_INTEGRATION_PATH = str(Path.home() / "knowledge" / "library" / "knowledge_base")
     
     STOPWORDS = {
-        'der', 'die', 'das', 'und', 'oder', 'mit', 'für', 'von', 'auf', 'in', 'zu',
-        'ist', 'sind', 'war', 'wurden', 'wird', 'werden', 'kann', 'können',
+        'der', 'die', 'das', 'und', 'oder', 'mit', 'fuer', 'von', 'auf', 'in', 'zu',
+        'ist', 'sind', 'war', 'wurden', 'wird', 'werden', 'kann', 'koennen',
         'eine', 'einer', 'einem', 'einen', 'als', 'an', 'auch', 'bei', 'bis',
-        'durch', 'für', 'hat', 'nach', 'nicht', 'nur', 'ob', 'oder', 'sich',
+        'durch', 'fuer', 'hat', 'nach', 'nicht', 'nur', 'ob', 'oder', 'sich',
         'sie', 'sind', 'so', 'sowie', 'um', 'unter', 'von', 'vor', 'wenn',
         'wie', 'wird', 'noch', 'schon', 'sehr', 'wurde', 'wurden', 'sein'
     }
@@ -350,7 +350,7 @@ class PDFIndexer:
         """
         Generate and store embeddings for all sections of a file in ChromaDB.
         
-        Phase 2.1: PDF → ChromaDB Integration
+        Phase 2.1: PDF -> ChromaDB Integration
         """
         try:
             chroma = self._get_chroma()
@@ -432,7 +432,7 @@ class PDFIndexer:
             return 'medizin_studien'
         elif 'gesundheit' in path_str:
             return 'gesundheit'
-        elif 'bücher' in path_str or 'bucher' in path_str:
+        elif 'buecher' in path_str or 'bucher' in path_str:
             return 'buecher'
         elif 'aluminium' in path_str:
             return 'aluminium'
@@ -522,7 +522,7 @@ class PDFIndexer:
             # Create section header from first meaningful line
             first_lines = page_content.split('\n')[:5]
             header_candidate = ' '.join(first_lines)[:100]
-            header = f"Seite {i+1}: {header_candidate}" if i > 0 else header_candidate[:100]
+            header = f"Page {i+1}: {header_candidate}" if i > 0 else header_candidate[:100]
             
             # Phase 5.2: Better encoding handling
             try:

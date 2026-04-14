@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Batch Embedding Script - Re-Embed alle 40k Sections
+Batch Embedding Script - Re-Embed all 40k Sections
 
-Dieses Script schließt die Embedding Gap:
-- Nur 16k/40k Sections waren in ChromaDB
-- Dieses Script embeddet ALLE Sections neu
+This script closes the Embedding Gap:
+- Only 16k/40k sections were in ChromaDB
+- This script re-embeds ALL sections
 
 Usage:
     python3 reembed_all.py [--limit N] [--batch-size N] [--stats]
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_stats():
-    """Hole aktuelle Statistiken."""
+    """Fetch current statistics."""
     db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
     chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
     
@@ -55,7 +55,7 @@ def get_stats():
         collection = chroma.sections_collection
         chroma_count = collection.count()
     except Exception as e:
-        logger.warning(f"ChromaDB nicht erreichbar: {e}")
+        logger.warning(f"ChromaDB not reachable: {e}")
         chroma_count = 0
     
     return {
@@ -68,7 +68,7 @@ def get_stats():
 
 def reembed_all(limit=None, batch_size=64):
     """
-    Re-Embed alle Sections in ChromaDB.
+    Re-Embed all sections in ChromaDB.
     
     Args:
         limit: Optional limit for testing
@@ -78,14 +78,14 @@ def reembed_all(limit=None, batch_size=64):
     chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
     
     logger.info("=" * 60)
-    logger.info("Batch Re-Embedding - Alle Sections")
+    logger.info("Batch Re-Embedding - All Sections")
     logger.info("=" * 60)
     
     start_time = datetime.now()
     
     # Initial stats
     stats_before = get_stats()
-    logger.info(f"\n📊 Vorher:")
+    logger.info(f"\n📊 Before:")
     logger.info(f"   SQLite Sections: {stats_before['sqlite_sections']}")
     logger.info(f"   ChromaDB Sections: {stats_before['chroma_sections']}")
     logger.info(f"   Gap: {stats_before['gap']}")
@@ -101,7 +101,7 @@ def reembed_all(limit=None, batch_size=64):
     pipeline._cache = {}
     
     # Run full embedding
-    logger.info(f"\n🚀 Starte Embedding (batch_size={batch_size})...")
+    logger.info(f"\n🚀 Starting Embedding (batch_size={batch_size})...")
     result = pipeline.run_full(
         limit=limit,
         force_reload=True  # Ignore cache, embed everything
@@ -111,31 +111,31 @@ def reembed_all(limit=None, batch_size=64):
     stats_after = get_stats()
     elapsed = (datetime.now() - start_time).total_seconds()
     
-    logger.info(f"\n📊 Nachher:")
+    logger.info(f"\n📊 After:")
     logger.info(f"   SQLite Sections: {stats_after['sqlite_sections']}")
     logger.info(f"   ChromaDB Sections: {stats_after['chroma_sections']}")
     logger.info(f"   Gap: {stats_after['gap']}")
     
-    logger.info(f"\n⏱️  Zeit: {elapsed:.1f} Sekunden")
-    logger.info(f"   Verarbeitet: {result['processed']} Sections")
+    logger.info(f"\n⏱️  Time: {elapsed:.1f} seconds")
+    logger.info(f"   Processed: {result['processed']} sections")
     if elapsed > 0:
-        logger.info(f"   Speed: {result['processed']/elapsed:.1f} Sections/Sek")
+        logger.info(f"   Speed: {result['processed']/elapsed:.1f} sections/sec")
     
     return result
 
 
 def main():
     parser = argparse.ArgumentParser(description="Batch Re-Embedding Script")
-    parser.add_argument("--limit", type=int, default=None, help="Limit für Testing")
-    parser.add_argument("--batch-size", type=int, default=64, help="Batch Größe (default: 64)")
-    parser.add_argument("--stats", action="store_true", help="Nur Statistiken anzeigen")
+    parser.add_argument("--limit", type=int, default=None, help="Limit for testing")
+    parser.add_argument("--batch-size", type=int, default=64, help="Batch size (default: 64)")
+    parser.add_argument("--stats", action="store_true", help="Show statistics only")
     
     args = parser.parse_args()
     
     if args.stats:
         stats = get_stats()
         print("=" * 50)
-        print("Embedding Gap - Statistiken")
+        print("Embedding Gap - Statistics")
         print("=" * 50)
         print(f"SQLite Sections:   {stats['sqlite_sections']}")
         print(f"ChromaDB Sections:  {stats['chroma_sections']}")
