@@ -22,6 +22,9 @@ from typing import Optional, List, Dict, Union
 from dataclasses import dataclass
 
 from .chroma_integration import ChromaIntegration, get_chroma
+from .fts5_setup import check_fts5_available
+from .synonyms import SynonymExpander, get_expander
+from .reranker import Reranker, get_reranker
 from kb.config import CHROMA_PATH
 
 # Provide default if config not available
@@ -145,10 +148,19 @@ class HybridSearch:
         
         self.chroma = ChromaIntegration(chroma_path=str(self.chroma_path))
         self._db_conn: Optional[sqlite3.Connection] = None
+        self._fts5_available: bool = False
         
         # Phase 3.2: Query Cache (LRU)
         self._query_cache: dict = {}
         self._cache_max_size: int = 100
+        
+        # Phase 2: Synonym Expander
+        self._expander: Optional[SynonymExpander] = None
+        self._synonym_expansion_enabled: bool = True
+        
+        # Phase 6: Re-Ranker
+        self._reranker: Optional[Reranker] = None
+        self._reranking_enabled: bool = False  # Off by default (adds latency)
         
         logger.info(f"HybridSearch init: db={self.db_path}")
     
@@ -171,9 +183,100 @@ class HybridSearch:
             self._db_conn = None
     
     # -------------------------------------------------------------------------
-    # Semantic Search (ChromaDB)
+
+    # -------------------------------------------------------------------------
+    # Phase 2: Synonym Expansion
     # -------------------------------------------------------------------------
     
+    @property
+    def expander(self) -> SynonymExpander:
+        """Lazy-load SynonymExpander."""
+        if self._expander is None:
+            self._expander = get_expander()
+        return self._expander
+    
+    def enable_synonym_expansion(self, enabled: bool) -> None:
+        """Enable or disable synonym expansion."""
+        self._synonym_expansion_enabled = enabled
+    
+    def expand_query(self, query: str) -> str:
+        """
+        Expand query with synonyms for better recall.
+        
+        Phase 2: Synonym expansion before search.
+        
+        Args:
+            query: Original query string
+            
+        Returns:
+            Expanded query string with synonyms
+        """
+        if not self._synonym_expansion_enabled:
+            return query
+        return self.expander.expand_query(query)
+
+    # -------------------------------------------------------------------------
+    # Phase 6: Re-Ranking
+    # -------------------------------------------------------------------------
+    
+    @property
+    def reranker(self) -> Reranker:
+        """Lazy-load Reranker."""
+        if self._reranker is None:
+            self._reranker = get_reranker()
+        return self._reranker
+    
+    def enable_reranking(self, enabled: bool) -> None:
+        """Enable or disable re-ranking (adds latency but improves quality)."""
+        self._reranking_enabled = enabled
+        logger.info(f"Re-ranking {'enabled' if enabled else 'disabled'}")
+    
+    def rerank_results(self, query: str, results: list) -> list:
+        """
+        Re-rank results using Cross-Encoder.
+        
+        Phase 6: Cross-Encoder re-ranking after hybrid search.
+        
+        Args:
+            query: Original search query
+            results: Initial search results
+            
+        Returns:
+            Re-ranked results (adds rerank_score to each result)
+        """
+        if not self._reranking_enabled or not results:
+            return results
+        
+        # Convert SearchResult to dict for reranker
+        result_dicts = []
+        for r in results:
+            result_dicts.append({
+                'section_id': r.section_id,
+                'file_id': r.file_id,
+                'file_path': r.file_path,
+                'section_header': r.section_header,
+                'content_preview': r.content_preview,
+                'content_full': r.content_full,
+                'section_level': r.section_level,
+                'importance_score': r.importance_score,
+                'keywords': r.keywords,
+                'semantic_score': r.semantic_score,
+                'keyword_score': r.keyword_score,
+                'combined_score': r.combined_score,
+                'source': r.source,
+            })
+        
+        # Re-rank
+        reranked_dicts = self.reranker.rerank(query, result_dicts)
+        
+        # Convert back to SearchResult
+        reranked_results = []
+        for rd in reranked_dicts:
+            reranked_results.append(SearchResult(**rd))
+        
+        return reranked_results
+
+
     def _semantic_search(
         self, 
         query: str, 
@@ -228,6 +331,145 @@ class HybridSearch:
         return search_results
     
     # -------------------------------------------------------------------------
+    # Keyword Search (FTS5 with BM25)
+    # -------------------------------------------------------------------------
+    
+    def _keyword_search_fts(
+        self,
+        query: str,
+        limit: Optional[int] = None
+    ) -> list[dict]:
+        """
+        Keyword search via SQLite FTS5 with BM25 ranking.
+        
+        Uses BM25 (Best Match 25) algorithm for relevance ranking instead of LIKE.
+        Falls back to LIKE search if FTS5 is not available.
+        
+        Args:
+            query: Query string
+            limit: Max results
+            
+        Returns:
+            List of results with BM25 keyword match scores
+        """
+        limit = limit or self.config.keyword_limit
+        
+        # Check FTS5 availability (cache the result)
+        if not hasattr(self, '_fts5_checked'):
+            self._fts5_available = check_fts5_available(self.db_conn)
+            self._fts5_checked = True
+            logger.info(f"FTS5 availability: {self._fts5_available}")
+        
+        if not self._fts5_available:
+            # Fallback to LIKE search
+            return self._keyword_search(query, limit)
+        
+        # Check if FTS5 table exists
+        try:
+            cursor = self.db_conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name='file_sections_fts' AND type='table'"
+            )
+            if not cursor.fetchone()[0]:
+                logger.warning("FTS5 table not found, falling back to LIKE")
+                return self._keyword_search(query, limit)
+        except Exception as e:
+            logger.warning(f"FTS5 table check failed: {e}, falling back to LIKE")
+            return self._keyword_search(query, limit)
+        
+        # Build FTS5 query - convert simple terms to FTS5 query syntax
+        # FTS5 supports AND, OR, NOT operators and prefix matching with *
+        terms = [t.strip().lower() for t in query.split() if len(t.strip()) > 1]
+        
+        if not terms:
+            return []
+        
+        # Build FTS5 query string
+        # Use quoted phrases for multi-word terms, simple terms for single words
+        fts5_query_parts = []
+        for term in terms:
+            if ' ' in term:
+                fts5_query_parts.append(f'"{term}"')
+            else:
+                fts5_query_parts.append(term)
+        
+        fts5_query = ' AND '.join(fts5_query_parts)
+        
+        try:
+            # Execute BM25 query
+            # BM25 returns negative values (closer to 0 = better match)
+            # We convert to a positive score: higher = better
+            sql = """
+                SELECT 
+                    section_id,
+                    file_id,
+                    file_path,
+                    section_header,
+                    content_preview,
+                    content_full,
+                    importance_score,
+                    keywords,
+                    bm25(file_sections_fts) as bm25_rank
+                FROM file_sections_fts
+                WHERE file_sections_fts MATCH ?
+                ORDER BY bm25_rank
+                LIMIT ?
+            """
+            cursor = self.db_conn.execute(sql, (fts5_query, limit))
+            
+            results = []
+            row_num = 0
+            total_rows = cursor.fetchall()  # Get all rows first
+            total = len(total_rows)
+            
+            for row in total_rows:
+                row_num += 1
+                section_id, file_id, file_path, section_header, \
+                content_preview, content_full, importance_score, \
+                keywords_str, bm25_rank = row
+                
+                # BM25 rank is negative (closer to 0 = better match)
+                # Convert to positive score where higher = better
+                # 
+                # Since BM25 values can be negative or near-zero with low document frequency,
+                # we use a combined approach:
+                # 1. Position-based score (results are ordered by BM25)
+                # 2. BM25 magnitude boost (if significantly negative = better match)
+                
+                # Position score: 1.0 for first, decreasing for later results
+                position_score = (total - row_num) / total if total > 0 else 0.5
+                
+                if bm25_rank is not None and bm25_rank < -0.001:
+                    # Significant negative BM25 = good match
+                    # The more negative, the better the match
+                    # Scale: -0.001 to -10 maps to 0.5 to 1.0
+                    bm25_boost = min(1.0, max(0.0, 0.5 + abs(bm25_rank) / 20.0))
+                    # Blend: 70% position, 30% BM25 boost
+                    bm25_score = 0.7 * position_score + 0.3 * bm25_boost
+                else:
+                    # Near-zero or positive BM25 - rely on position scoring
+                    bm25_score = position_score
+                
+                results.append({
+                    "section_id": str(section_id),
+                    "keyword_score": bm25_score,
+                    "file_id": str(file_id) if file_id else "",
+                    "file_path": file_path or "",
+                    "section_header": section_header or "",
+                    "content_preview": content_preview or "",
+                    "content_full": content_full or "",
+                    "section_level": 0,
+                    "importance_score": importance_score or 0.5,
+                    "keywords": self._parse_keywords(keywords_str)
+                })
+            
+            logger.info(f"FTS5 BM25 search for '{query}': {len(results)} results")
+            return results
+            
+        except Exception as e:
+            logger.warning(f"FTS5 BM25 query failed: {e}, falling back to LIKE")
+            return self._keyword_search(query, limit)
+    
+    # -------------------------------------------------------------------------
     # Keyword Search (SQLite)
     # -------------------------------------------------------------------------
     
@@ -259,17 +501,15 @@ class HybridSearch:
         params = []
         
         for term in terms:
-            like_clauses.append("(content_full LIKE ? OR section_header LIKE ? OR keywords LIKE ?)")
-            params.extend([f"%{term}%", f"%{term}%", f"%{term}%"])
+            like_clauses.append("(section_content LIKE ? OR section_header LIKE ?)")
+            params.extend([f"%{term}%", f"%{term}%"])
         
         sql = f"""
             SELECT 
-                id, file_id, file_path, section_header,
-                content_preview, content_full, section_level,
-                COALESCE(importance_score, 0.5) AS importance_score, keywords
+                id, file_id, section_header, section_content, section_level
             FROM file_sections
             WHERE {' AND '.join(like_clauses)}
-            ORDER BY COALESCE(importance_score, 0.5) DESC
+            ORDER BY COALESCE(section_level, 0) DESC, id
             LIMIT ?
         """
         params.append(limit)
@@ -278,12 +518,10 @@ class HybridSearch:
         
         results = []
         for row in cursor.fetchall():
-            section_id, file_id, file_path, section_header, \
-            content_preview, content_full, section_level, \
-            importance_score, keywords_str = row
+            section_id, file_id, section_header, section_content, section_level = row
             
             # Calculate keyword score
-            all_text = f"{section_header} {content_full} {keywords_str}".lower()
+            all_text = f"{section_header} {section_content}".lower()
             matches = sum(1 for term in terms if term in all_text)
             keyword_score = matches / len(terms)  # 0.0 to 1.0
             
@@ -292,17 +530,29 @@ class HybridSearch:
             if exact_matches == len(terms):
                 keyword_score *= self.config.keyword_exact_boost
             
+            # Get file_path from files table
+            file_path = ""
+            try:
+                cursor2 = self.db_conn.execute(
+                    "SELECT file_path FROM files WHERE id = ?", (file_id,)
+                )
+                row2 = cursor2.fetchone()
+                if row2:
+                    file_path = row2[0]
+            except:
+                pass
+            
             results.append({
-                "section_id": section_id,
+                "section_id": str(section_id),
                 "keyword_score": min(keyword_score, 1.0),
-                "file_id": file_id,
-                "file_path": file_path,
+                "file_id": str(file_id) if file_id else "",
+                "file_path": file_path or "",
                 "section_header": section_header or "",
-                "content_preview": content_preview or "",
-                "content_full": content_full or "",
+                "content_preview": section_content[:500] if section_content else "",
+                "content_full": section_content or "",
                 "section_level": section_level or 0,
-                "importance_score": importance_score or 0.5,
-                "keywords": self._parse_keywords(keywords_str)
+                "importance_score": 0.5,  # Default for file_sections without importance_score
+                "keywords": []
             })
         
         return results
@@ -400,7 +650,6 @@ class HybridSearch:
     def _get_cached(self, cache_key: str):
         """Retrieve result from cache."""
         return self._query_cache.get(cache_key)
-        return self._query_cache.get(cache_key)
     
     def _set_cached(self, cache_key: str, result: list) -> None:
         """Store result in cache (LRU)."""
@@ -435,14 +684,17 @@ class HybridSearch:
         query = query.strip()
         limit = limit or self.config.final_limit
         
+        # Phase 2: Synonym expansion for better recall
+        expanded_query = self.expand_query(query)
+        
         # Phase 3.2: Cache check
-        cache_key = f"{query}:{limit}:{semantic_only}:{keyword_only}"
+        cache_key = f"{expanded_query}:{limit}:{semantic_only}:{keyword_only}"
         cached = self._get_cached(cache_key)
         if cached is not None:
             logger.info(f"Cache HIT for query: '{query}'")
             return cached
         
-        logger.info(f"HybridSearch query: '{query}' (semantic_only={semantic_only}, keyword_only={keyword_only})")
+        logger.info(f"HybridSearch query: '{query}' → expanded:'{expanded_query}' (semantic_only={semantic_only}, keyword_only={keyword_only})")
         
         # Execute searches
         semantic_results = []
@@ -452,7 +704,8 @@ class HybridSearch:
             semantic_results = self._semantic_search(query)
         
         if not semantic_only:
-            keyword_results = self._keyword_search(query)
+            # Use FTS5 BM25 search if available, fallback to LIKE
+            keyword_results = self._keyword_search_fts(query)
         
         # Merge and rank
         results = self._merge_and_rank(semantic_results, keyword_results)
@@ -468,6 +721,9 @@ class HybridSearch:
         ]
         
         logger.info(f"  -> {len(results)} results")
+        
+        # Phase 6: Re-ranking (optional, adds latency)
+        results = self.rerank_results(query, results)
         
         # Cache result
         self._set_cached(cache_key, results)

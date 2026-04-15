@@ -127,6 +127,79 @@ class ChromaIntegration:
         ).tolist()
     
     # -------------------------------------------------------------------------
+    # Phase 4: Alternative Embedding Model
+    # -------------------------------------------------------------------------
+    
+    @property
+    def alternative_model_name(self) -> str:
+        """Phase 4: Alternative model name for better multilingual support."""
+        return "paraphrase-multilingual-MiniLM-L12-v2"
+    
+    def embed_text_v2(self, text: str) -> list[float]:
+        """
+        Embed text using the alternative multilingual model.
+        
+        Phase 4: paraphrase-multilingual-MiniLM-L12-v2
+        Better for mixed German/English content.
+        
+        Args:
+            text: Input text
+            
+        Returns:
+            Normalized embedding vector (384 dimensions)
+        """
+        if not text or not text.strip():
+            return [0.0] * 384
+        
+        model = SentenceTransformer(self.alternative_model_name)
+        return model.encode(
+            text,
+            normalize_embeddings=True,
+            show_progress_bar=False
+        ).tolist()
+    
+    def embed_batch_v2(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+        """
+        Batch embedding using the alternative multilingual model.
+        
+        Phase 4: paraphrase-multilingual-MiniLM-L12-v2
+        
+        Args:
+            texts: List of texts
+            batch_size: Batch size for inference
+            
+        Returns:
+            List of embedding vectors
+        """
+        if not texts:
+            return []
+        
+        model = SentenceTransformer(self.alternative_model_name)
+        return model.encode(
+            texts,
+            normalize_embeddings=True,
+            batch_size=batch_size,
+            show_progress_bar=True
+        ).tolist()
+    
+    def switch_to_v2_model(self) -> 'ChromaIntegration':
+        """
+        Create a new ChromaIntegration instance with the V2 (multilingual) model.
+        
+        Phase 4: Returns new instance with paraphrase-multilingual-MiniLM-L12-v2.
+        Does NOT modify existing instance (immutable switch).
+        
+        Returns:
+            New ChromaIntegration with V2 model
+        """
+        new_instance = ChromaIntegration(
+            chroma_path=str(self.chroma_path),
+            model_name=self.alternative_model_name
+        )
+        logger.info(f"Switched to V2 model: {self.alternative_model_name}")
+        return new_instance
+    
+    # -------------------------------------------------------------------------
     # Collection Management
     # -------------------------------------------------------------------------
     
@@ -179,15 +252,45 @@ class ChromaIntegration:
     # Pre-configured Collections
     # -------------------------------------------------------------------------
     
+    # Alternative embedding models
+    # Phase 4: paraphrase-multilingual-MiniLM-L12-v2 (better multilingual, 384 dim)
+    ALTERNATIVE_MODELS = {
+        "paraphrase-multilingual-MiniLM-L12-v2": {
+            "dimension": 384,
+            "description": "Better multilingual support, recommended for mixed DE/EN content"
+        }
+    }
+    
+    # Phase 4: V2 Collection for new model
     @property
     def sections_collection(self) -> chromadb.Collection:
-        """Collection for file_sections embeddings."""
+        """Collection for file_sections embeddings (original model)."""
         return self.get_or_create_collection(
             name="kb_sections",
             metadata={
                 "description": "Knowledge Base Sections Embeddings",
                 "embedding_model": self.model_name,
                 "dimension": 384
+            }
+        )
+    
+    @property
+    def sections_collection_v2(self) -> chromadb.Collection:
+        """
+        Collection for file_sections embeddings using paraphrase-multilingual-MiniLM-L12-v2.
+        
+        Phase 4: New embedding model with better multilingual support.
+        768 → 384 dimensions (MiniLM-L12-v2 is 384, not 768 as sometimes stated).
+        """
+        model_key = "paraphrase-multilingual-MiniLM-L12-v2"
+        dim = self.ALTERNATIVE_MODELS[model_key]["dimension"]
+        
+        return self.get_or_create_collection(
+            name="kb_sections_v2",
+            metadata={
+                "description": "Knowledge Base Sections Embeddings V2 (multilingual)",
+                "embedding_model": model_key,
+                "dimension": dim
             }
         )
     
