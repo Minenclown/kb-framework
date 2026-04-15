@@ -1,5 +1,9 @@
 # KB Framework – Deterministic Context Mapping
 
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Python](https://img.shields.io/badge/python-3.9+-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 > Line numbers, not paragraphs.
 
 ## The Problem
