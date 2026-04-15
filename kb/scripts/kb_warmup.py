@@ -8,9 +8,9 @@ Purpose: First query should not be 8s slow
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / ".openclaw" / "kb" / "library"))
+sys.path.insert(0, str(Path.home() / ".openclaw" / "kb"))
 
-from knowledge_base.chroma_integration import ChromaIntegration
+from kb.library.knowledge_base.chroma_integration import ChromaIntegration
 
 def warmup():
     print("Warming up ChromaDB model...")

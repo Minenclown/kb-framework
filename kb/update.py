@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Configuration
-GITHUB_REPO = "Minenclown/kb-framework"  # TODO: Update with actual repo
+GITHUB_REPO = "Minenclown/kb-framework"
 VERSION_FILE = Path(__file__).parent / "version.py"
 BACKUP_DIR = Path.home() / ".knowledge" / "backup"
 

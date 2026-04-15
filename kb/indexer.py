@@ -690,7 +690,12 @@ def main():
     """CLI for Indexer."""
     import sys
 
+    # Default paths from config
     db_path = sys.argv[1] if len(sys.argv) > 1 else "knowledge.db"
+    root_paths = KBConfig.get_instance().index_roots
+    
+    if len(sys.argv) > 2:
+        root_paths = sys.argv[2:]
 
     # Configure logging
     logging.basicConfig(
@@ -699,15 +704,6 @@ def main():
     )
 
     indexer = BiblioIndexer(db_path)
-
-    # Default paths if none provided
-    root_paths = [
-        "projektplanung",
-        "learnings",
-    ]
-
-    if len(sys.argv) > 2:
-        root_paths = sys.argv[2:]
 
     logger.info(f"Starting indexing to {db_path}")
     logger.info(f"   Directories: {', '.join(root_paths)}\n")

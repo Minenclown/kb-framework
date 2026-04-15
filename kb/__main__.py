@@ -1,168 +1,174 @@
 #!/usr/bin/env python3
 """
-KB Framework CLI - Main entry point
+KB Framework CLI - Command Discovery und Execution
 
 Usage:
     python3 -m kb <command> [args]
-
+    cd ~/projects/kb-framework && python3 -m kb <command> [args]
+    
 Commands:
-    index <path>        Index a file or directory
-    search <query>      Search the knowledge base
-    stats               Show KB statistics
-    update              Check for and install updates
-    audit               Run full audit
-    ghost               Find orphaned entries
-    warmup              Preload ChromaDB model
+    sync      Sync ChromaDB with SQLite
+    audit     Run full KB audit
+    ghost     Find orphaned entries
+    warmup    Preload ChromaDB model
+
+Architecture:
+    kb/
+    ├── base/           # Core components
+    │   ├── config.py   # KBConfig singleton
+    │   ├── logger.py   # KBLogger singleton
+    │   ├── db.py       # KBConnection context manager
+    │   └── command.py  # BaseCommand abstract class
+    ├── commands/        # Command implementations
+    │   ├── sync.py     # SyncCommand
+    │   ├── audit.py    # AuditCommand
+    │   ├── ghost.py    # GhostCommand
+    │   └── warmup.py   # WarmupCommand
+    └── __main__.py     # CLI entrypoint
 """
 
 import argparse
 import sys
+import os
 from pathlib import Path
 
-# Add parent to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add parent directory to path for imports
+KB_DIR = Path(__file__).resolve().parent  # This is kb/ directory
+PARENT_DIR = KB_DIR.parent  # This is kb-framework/ directory
 
-from kb.indexer import BiblioIndexer
+# Ensure our packages are on the path
+if str(PARENT_DIR) not in sys.path:
+    sys.path.insert(0, str(PARENT_DIR))
 
-
-def cmd_index(args):
-    """Index a file or directory."""
-    path = Path(args.path)
-    if not path.exists():
-        print(f"Path not found: {path}")
-        return 1
-
-    kb = BiblioIndexer()
-    if path.is_file():
-        kb.index_file(path)
-        print(f"Indexed: {path}")
-    else:
-        kb.index_directory(path)
-        print(f"Indexed directory: {path}")
-    return 0
+# Setup paths for KB installation
+KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
+os.environ.setdefault("KB_BASE_PATH", KB_BASE_PATH)
 
 
-def cmd_search(args):
-    """Search the knowledge base."""
-    from kb.library.knowledge_base.hybrid_search import HybridSearch
-
-    hs = HybridSearch()
-    results = hs.search(args.query, limit=args.limit)
-
-    print(f"Found {len(results)} results for: {args.query}")
-    print("-" * 50)
-
-    for r in results[:args.limit]:
-        print(f"\n{r.get('file_name', 'Unknown')}")
-        print(f"   Score: {r.get('score', 0):.2f}")
-        preview = r.get('content_preview', '')[:150]
-        if preview:
-            print(f"   {preview}...")
-    return 0
+def setup_environment():
+    """Setup environment variables and paths."""
+    # Ensure KB directories exist
+    for subdir in ['knowledge.db', 'chroma_db']:
+        path = Path(KB_BASE_PATH) / subdir
+        if not path.exists() and subdir != 'knowledge.db':  # DB might not exist yet
+            pass  # Let individual commands handle directory creation
 
 
-def cmd_stats(args):
-    """Show KB statistics."""
-    kb = BiblioIndexer()
-    stats = kb.get_stats()
-
-    print("KB Framework Statistics")
-    print("=" * 40)
-    print(f"Files: {stats.get('files', 'N/A')}")
-    print(f"Sections: {stats.get('sections', 'N/A')}")
-    print(f"Keywords: {stats.get('keywords', 'N/A')}")
-    return 0
-
-
-def cmd_update(args):
-    """Check for updates."""
-    from kb import update
-
-    # Pass args to update module
-    update.args = args
-    update.main()
-    return 0
-
-
-def cmd_audit(args):
-    """Run full audit."""
-    import subprocess
-    script = Path(__file__).parent / "scripts" / "kb_full_audit.py"
-    subprocess.run([sys.executable, str(script)])
-    return 0
-
-
-def cmd_ghost(args):
-    """Find ghost entries."""
-    import subprocess
-    script = Path(__file__).parent / "scripts" / "kb_ghost_scanner.py"
-    subprocess.run([sys.executable, str(script)])
-    return 0
-
-
-def cmd_warmup(args):
-    """Preload ChromaDB model."""
-    import subprocess
-    script = Path(__file__).parent / "scripts" / "kb_warmup.py"
-    subprocess.run([sys.executable, str(script)])
-    return 0
-
-
-def main():
+def create_parser() -> argparse.ArgumentParser:
+    """Build argument parser with all commands."""
     parser = argparse.ArgumentParser(
         prog='kb',
-        description='KB Framework - Knowledge Base Management'
+        description='KB Framework - Knowledge Base Management',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  kb sync --stats          Show sync statistics
+  kb sync --dry-run        Preview sync without changes  
+  kb audit -v              Run audit with verbose output
+  kb ghost --scan-dirs ~/docs,~/notes
+  kb warmup                Preload embedding model
+
+Environment Variables:
+  KB_BASE_PATH       Base directory for KB (default: ~/.openclaw/kb)
+  KB_DB_PATH         SQLite database path
+  KB_CHROMA_PATH     ChromaDB persistence path
+  KB_LIBRARY_PATH    Document library path
+  KB_WORKSPACE_PATH  Workspace path
+        """
     )
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='%(prog)s 1.1.0'
+    )
+    
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug logging'
+    )
+    
+    parser.add_argument(
+        '--quiet', '-q',
+        action='store_true',
+        help='Suppress informational output'
+    )
+    
+    # Subcommands
+    subparsers = parser.add_subparsers(
+        dest='command', 
+        help='Commands',
+        title='Commands'
+    )
+    
+    return parser, subparsers
 
-    # Index command
-    p_index = subparsers.add_parser('index', help='Index file or directory')
-    p_index.add_argument('path', help='Path to index')
 
-    # Search command
-    p_search = subparsers.add_parser('search', help='Search knowledge base')
-    p_search.add_argument('query', help='Search query')
-    p_search.add_argument('-l', '--limit', type=int, default=10, help='Result limit')
+def register_command_arguments(parser, cmd_cls):
+    """Register a command's arguments with the subparser."""
+    subparser = parser.add_parser(
+        cmd_cls.name,
+        help=cmd_cls.help,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    cmd = cmd_cls()
+    cmd.add_arguments(subparser)
+    return cmd
 
-    # Stats command
-    p_stats = subparsers.add_parser('stats', help='Show statistics')
 
-    # Update command
-    p_update = subparsers.add_parser('update', help='Check for updates')
-    p_update.add_argument('--check', action='store_true', help='Only check')
-    p_update.add_argument('--force', action='store_true', help='Force update')
-
-    # Audit command
-    p_audit = subparsers.add_parser('audit', help='Run full audit')
-
-    # Ghost command
-    p_ghost = subparsers.add_parser('ghost', help='Find ghost entries')
-
-    # Warmup command
-    p_warmup = subparsers.add_parser('warmup', help='Preload model')
-
+def main() -> int:
+    """Main entrypoint."""
+    # Setup logging first
+    import logging
+    from kb.base.logger import KBLogger
+    
+    # Parse known args first to check for debug
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--debug', action='store_true')
+    pre_parser.add_argument('--quiet', '-q', action='store_true')
+    pre_args, _ = pre_parser.parse_known_args()
+    
+    # Setup logging
+    log_level = logging.DEBUG if pre_args.debug else logging.INFO
+    if pre_args.quiet:
+        log_level = logging.WARNING
+    
+    KBLogger.setup_logging(level=log_level)
+    
+    # Build full parser
+    parser, subparsers = create_parser()
+    
+    # Import and register commands
+    from kb.commands import get_commands, _ensure_commands_loaded
+    
+    _ensure_commands_loaded()
+    commands = get_commands()
+    
+    # Register each command
+    command_instances = {}
+    for name, cmd_cls in sorted(commands.items()):
+        cmd = register_command_arguments(subparsers, cmd_cls)
+        command_instances[name] = cmd
+    
+    # Parse all arguments
     args = parser.parse_args()
-
+    
+    # Show help if no command specified
     if not args.command:
         parser.print_help()
+        print("\nCommands:")
+        for name, cmd_cls in sorted(commands.items()):
+            print(f"  {name:12} {cmd_cls.help}")
+        return 0
+    
+    # Execute command
+    cmd = command_instances.get(args.command)
+    if not cmd:
+        print(f"Unknown command: {args.command}", file=sys.stderr)
         return 1
-
-    commands = {
-        'index': cmd_index,
-        'search': cmd_search,
-        'stats': cmd_stats,
-        'update': cmd_update,
-        'audit': cmd_audit,
-        'ghost': cmd_ghost,
-        'warmup': cmd_warmup,
-    }
-
-    handler = commands.get(args.command)
-    if handler:
-        return handler(args)
-
-    parser.print_help()
-    return 1
+    
+    return cmd.run(args)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 # KB Framework Roadmap
 
-**Version:** 1.0.4  
-**Last Updated:** 2026-04-13
+**Version:** 1.1.0  
+**Last Updated:** 2026-04-15
 
 ---
 
@@ -17,16 +17,19 @@ This document outlines the strategic direction and planned enhancements for the 
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Multi-Format Indexing** | Support for PDF, TXT, DOCX via automatic conversion to Markdown with metadata headers | Planned |
-| **Hybrid Search Module** | Re-integration of combined keyword + semantic search capabilities | In Recovery |
+| **Hybrid Search Module** | Re-integration of combined keyword + semantic search capabilities | ✅ Done |
 
 ### High
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | OCR Engine Configuration | Flexible OCR backend selection (Tesseract default, EasyOCR optional) | Planned |
-| ChromaDB Warmup | Model preloading to eliminate cold-start latency | Planned |
-| Delta Indexing | Incremental re-indexing based on file modification timestamps | Planned |
+| **ChromaDB Warmup** | Model preloading to eliminate cold-start latency | ✅ Done |
+| **Delta Indexing** | Incremental re-indexing based on file modification timestamps | ✅ Done |
+| **SearchCommand CLI** | Unified search command with filters (semantic/keyword/fts5) | ✅ Done |
+| **FTS5 Integration** | SQLite Full-Text Search for keyword fallback | ✅ Done |
+| **Reranker Module** | Cross-encoder reranking for search results | ✅ Done |
+| **ChromaPlugin** | ChromaDB collection management and persistence | ✅ Done |
 
 ### Medium
 

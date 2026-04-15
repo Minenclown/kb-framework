@@ -310,3 +310,20 @@ class VaultWriter:
 ---
 
 **Nächster Schritt:** Softaware kann mit Phase 6a beginnen.
+
+---
+
+# Korrekturen
+
+## 2026-04-15
+
+### `kb/config.py` entfernt
+
+- **Problem:** O3 hatte fälschlicherweise eine neue `kb/config.py` mit Deprecation-Warnung erstellt
+- **Lösung:** Datei vollständig entfernt (Commit 2026-04-15)
+- **Grund:** Alle relevanten Imports wurden bereits auf `kb.base.config` umgestellt (W1, W2)
+- **Geänderte Dateien:**
+  - `kb/library/knowledge_base/embedding_pipeline.py` - Fallback-Import entfernt
+  - `kb/library/knowledge_base/chroma_plugin.py` - Fallback-Import entfernt
+  - `kb/config.py` - gelöscht
+- **Status:** ✅ Tests bestanden

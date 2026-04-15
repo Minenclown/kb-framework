@@ -21,17 +21,19 @@ import sqlite3
 import threading
 from pathlib import Path
 from typing import List, Optional, Set
+
+# Import shared utility for embedding text building
+from kb.library.knowledge_base.utils import build_embedding_text
 from queue import Queue, Empty
 from dataclasses import dataclass, field
 from datetime import datetime
 
-# Import config
+# Import config - prefer modern singleton pattern
 import sys
+from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-try:
-    from kb.config import CHROMA_PATH as _default_chroma_path
-except ImportError:
-    _default_chroma_path = "library/chroma_db/"
+from kb.base.config import KBConfig
+_default_chroma_path = str(KBConfig.get_instance().chroma_path)
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +302,7 @@ class ChromaDBPlugin:
                 # Build texts for embedding
                 texts = []
                 for task in batch:
-                    text = self._build_embedding_text(
+                    text = build_embedding_text(
                         task.section_header,
                         task.content_full,
                         task.keywords
@@ -401,37 +403,7 @@ class ChromaDBPlugin:
         finally:
             self._bg_running = False
     
-    def _build_embedding_text(
-        self,
-        header: str,
-        content: str,
-        keywords: List[str]
-    ) -> str:
-        """
-        Builds optimal text for embedding.
-        
-        Structure:
-        - Header as title (high weight via repetition)
-        - Content preview (first 500 chars)
-        - Keywords as bonus context
-        """
-        parts = []
-        
-        # Header bekommt.extra Weight durch Repetition
-        if header:
-            parts.append(header)
-            parts.append(header)
-        
-        # Content preview (limited for performance)
-        if content:
-            preview = content[:500].strip()
-            parts.append(preview)
-        
-        # Keywords als Kontext
-        if keywords:
-            parts.append(" ".join(keywords[:10]))
-        
-        return " | ".join(parts)
+    # _build_embedding_text removed - using shared build_embedding_text from utils.py
     
     def get_queue_size(self) -> int:
         """Returns current queue size."""

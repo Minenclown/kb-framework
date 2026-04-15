@@ -25,13 +25,13 @@ from .chroma_integration import ChromaIntegration, get_chroma
 from .fts5_setup import check_fts5_available
 from .synonyms import SynonymExpander, get_expander
 from .reranker import Reranker, get_reranker
-from kb.config import CHROMA_PATH
 
 # Provide default if config not available
 try:
-    _default_chroma_path = CHROMA_PATH
-except NameError:
-    _default_chroma_path = "library/chroma_db/"
+    from kb.base.config import KBConfig
+    _default_chroma_path = str(KBConfig.get_instance().chroma_path)
+except ImportError:
+    _default_chroma_path = str(Path.home() / ".openclaw" / "kb" / "chroma_db")
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)

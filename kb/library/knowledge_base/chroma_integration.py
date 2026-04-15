@@ -23,9 +23,10 @@ from contextlib import contextmanager
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 try:
-    from kb.config import CHROMA_PATH as _default_chroma_path
+    from kb.base.config import KBConfig
+    _default_chroma_path = str(KBConfig.get_instance().chroma_path)
 except ImportError:
-    _default_chroma_path = "library/chroma_db/"
+    _default_chroma_path = str(Path.home() / ".openclaw" / "kb" / "chroma_db")
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)

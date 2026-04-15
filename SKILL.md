@@ -1,6 +1,6 @@
 # KB Framework - OpenClaw Skill
 
-**Version:** 1.0.0  
+**Version:** 2.0  
 **Category:** Knowledge Base / Search  
 **Requires:** Python 3.9+, SQLite, ChromaDB  
 
@@ -76,8 +76,6 @@ alias kb="/path/to/kb-framework/kb.sh"
 # Commands:
 kb index /path/to/file.md        # Index a file
 kb search "machine learning"     # Search knowledge base
-kb stats                         # Show statistics
-kb update                        # Check for updates
 kb audit                         # Run full audit
 kb ghost                         # Find orphaned entries
 kb warmup                        # Preload ChromaDB model
@@ -108,17 +106,25 @@ kb-framework/
 ├── SKILL.md                    # This file
 ├── README.md                   # Detailed documentation
 ├── kb/
-│   ├── indexer.py             # Core Indexer (BiblioIndexer)
-│   └── library/
-│       └── knowledge_base/
-│           ├── hybrid_search.py       # Hybrid Search
-│           ├── chroma_integration.py  # ChromaDB Wrapper
-│           └── embedding_pipeline.py # Batch Embeddings
+│   ├── indexer.py              # Core Indexer (BiblioIndexer)
+│   ├── commands/               # CLI Commands: index, sync, audit, ghost, warmup, search
+│   ├── base/                    # Core: config.py, db.py, logger.py, command.py
+│   ├── library/
+│   │   └── knowledge_base/
+│   │       ├── hybrid_search.py       # Hybrid Search (semantic + keyword)
+│   │       ├── chroma_integration.py  # ChromaDB Wrapper
+│   │       ├── chroma_plugin.py       # ChromaDB Plugin (Collection Management)
+│   │       ├── embedding_pipeline.py # Batch Embeddings
+│   │       ├── reranker.py           # Search Result Reranker
+│   │       ├── fts5_setup.py          # SQLite FTS5 Full-Text Search
+│   │       ├── chunker.py            # Text Chunking
+│   │       └── synonyms.py            # Query Expansion
+│   └── obsidian/                # Obsidian Vault Integration
 └── scripts/
     ├── index_pdfs.py          # PDF + OCR Indexing
-    ├── kb_ghost_scanner.py    # Find ghost files
-    ├── kb_full_audit.py       # Audit + Cleanup
-    └── kb_warmup.py           # Preload model
+    ├── kb_ghost_scanner.py    # Legacy ghost scanner
+    ├── kb_full_audit.py       # Legacy audit script
+    └── kb_warmup.py           # Legacy warmup script
 ```
 
 ---

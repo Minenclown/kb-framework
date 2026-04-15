@@ -20,6 +20,114 @@ Search quality depends on the density and accuracy of these references.
 
 ---
 
+## CLI Commands
+
+Alle Commands werden über `python3 -m kb <command>` aufgerufen.
+
+### sync
+Delta-Synchronisation zwischen SQLite und ChromaDB.
+```bash
+kb sync --stats        # Statistiken anzeigen
+kb sync --dry-run      # Simulation ohne Änderungen
+kb sync                # Delta-Sync ausführen
+kb sync --full         # Vollständiger Re-Sync
+kb sync --file-id 123  # Einzelne Datei syncen
+```
+
+### audit
+Vollständiger Integritätscheck.
+```bash
+kb audit               # Alle Checks
+kb audit -v            # Mit Details
+kb audit --export-csv issues.csv
+```
+
+### ghost
+Verwaiste Einträge finden.
+```bash
+kb ghost --scan-dirs ~/docs,~/notes
+```
+
+### search
+Hybrid Search (semantic + keyword).
+```bash
+kb search "MTHFR mutation"                    # Hybrid Search
+kb search "MTHFR" --semantic-only            # Nur Vektor-Suche
+kb search "MTHFR" --keyword-only             # Nur LIKE-Suche
+kb search "workflow" --limit 10              # Mehr Results
+kb search "notes" --file-type md             # Nach Dateityp filtern
+kb search "notes" --file-type md,pdf         # Mehrere Dateitypen
+kb search "audit" --date-from 2026-01-01     # Nach Datum filtern
+kb search "audit" --format full              # Detailliertes Output
+kb search "query" --debug                    # Debug-Info (Scores, Sources)
+```
+
+### warmup
+ChromaDB Model vorladen.
+```bash
+kb warmup
+```
+
+---
+
+## Search Architecture
+
+### Hybrid Search
+Combines two search paradigms:
+- **Semantic (ChromaDB)**: Vector similarity via `all-MiniLM-L6-v2` embeddings
+- **Keyword (SQLite)**: LIKE-based full-text search
+
+### Scoring Formula
+```
+combined_score = (semantic_score × 0.6) + (keyword_score × 0.4) × importance_boost
+```
+
+### Search Modes
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| Hybrid (default) | Combines semantic + keyword | Most queries |
+| `--semantic-only` | Only ChromaDB vector search | Natural language |
+| `--keyword-only` | Only SQLite LIKE search | Exact terms, fallback |
+
+### Filtering
+- `--file-type`: Filter by extension (md, pdf, txt)
+- `--date-from/date-to`: Filter by file last_modified
+- Wing/Room/Hall metadata (Phase 3.1)
+
+### Output Format (CLI)
+```
+📄 filename:line [score] Section Header
+```
+
+Without line number:
+```
+📄 filename.md [score] Section Header
+```
+
+### Code Reference
+- CLI Command: `kb/commands/search.py`
+- Search Engine: `kb/library/knowledge_base/hybrid_search.py`
+- ChromaDB Integration: `kb/library/knowledge_base/chroma_integration.py`
+
+### Command Architecture
+```
+kb/
+├── base/
+│   └── command.py          # BaseCommand ABC
+├── commands/
+│   ├── __init__.py         # @register_command decorator
+│   ├── sync.py             # Delta sync (ChromaDB ↔ SQLite)
+│   ├── audit.py            # Integrity checks
+│   ├── ghost.py            # Orphan detection
+│   ├── search.py           # Hybrid search CLI
+│   └── warmup.py           # ChromaDB pre-warming
+└── library/knowledge_base/
+    ├── hybrid_search.py    # HybridSearch class
+    └── chroma_integration.py
+```
+
+---
+
 ## Data Structure
 
 ### 1. Files Table
