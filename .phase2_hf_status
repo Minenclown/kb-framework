@@ -1,0 +1,61 @@
+Phase 2: HuggingFace Model-Loading + Quantization — COMPLETE
+
+Completed: 2026-04-16
+
+## Implemented Methods
+
+### 1. Lazy Loading
+- `load_model()` — thread-safe model loading with `threading.Lock`
+- `_ensure_model_loaded()` — lazy-load on first `generate()` call
+- `_do_load_model()` — internal loading logic (caller holds lock)
+
+### 2. Device Auto-Detection
+- `_detect_device()` — CUDA > MPS > CPU priority when `hf_device="auto"`
+- Supports explicit device strings: `"cuda"`, `"cuda:0"`, `"cuda:1"`, `"mps"`, `"cpu"`
+- Device stored in `self._device` for use during generation
+
+### 3. Quantization
+- `_build_quantization_config()` — returns `BitsAndBytesConfig` for:
+  - `"4bit"` → NF4 + double quantization + compute dtype
+  - `"8bit"` → LLM.int8()
+  - `None` → no quantization (full precision)
+- `_resolve_dtype()` — auto-selects bfloat16/float16/float32 based on hardware
+
+### 4. Model Loading
+- `_do_load_model()` — full implementation:
+  - `AutoModelForCausalLM.from_pretrained()` with all config options
+  - `AutoTokenizer.from_pretrained()` with caching/token support
+  - `hf_cache_dir` for local caching
+  - `hf_revision` for version pinning
+  - `hf_token` for gated models
+  - `hf_trust_remote_code` support
+  - `hf_offload_folder` support
+  - `device_map="auto"` when appropriate
+  - `pad_token = eos_token` fallback
+  - Progress logging at each stage
+  - Model set to `.eval()` mode after loading
+
+### 5. Memory Management
+- `unload_model()` — deletes model/tokenizer, clears GPU cache, runs gc.collect()
+- `_try_cpu_fallback()` — automatic OOM fallback: GPU → CPU float32
+- `__del__` destructor — cleanup + executor shutdown
+
+### 6. Generation (bonus, part of Phase 2 interface)
+- `generate()` — sync generation with lazy-load, OOM handling, tokenization
+- `generate_async()` — async wrapper via ThreadPoolExecutor
+- `supports_streaming = True`, `supports_async = True`
+
+## Files Modified
+- `kb/llm/engine/transformers_engine.py` — full Phase 2 implementation (~550 lines)
+
+## Verification
+- `python3 -m py_compile` — PASSED
+- All AST methods present and correct
+- No syntax errors
+
+## Not Yet Implemented (Phase 3)
+- `generate_stream()` — streaming via TextIteratorStreamer
+- `generate_stream_async()` — async streaming
+- Chat template support
+- Batch generation
+- GPU stats monitoring

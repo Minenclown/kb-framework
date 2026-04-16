@@ -483,7 +483,9 @@ class VaultWriter:
         vault_path: str | None = None
     ) -> Path:
         """
-        Sync a KB entry to the vault (placeholder for KB integration).
+        Sync a KB entry to the vault.
+        
+        Delegates to SyncManager for bidirectional sync support.
         
         Args:
             kb_entry_id: ID of the KB entry
@@ -491,33 +493,48 @@ class VaultWriter:
         
         Returns:
             Path to the created/updated note
-        
-        Raises:
-            NotImplementedError: KB integration not yet implemented
         """
-        raise NotImplementedError(
-            "KB sync not yet implemented - requires KB database integration"
+        from .sync_manager import SyncManager
+        from .conflict import ConflictResolution
+        
+        target_vault = Path(vault_path) if vault_path else self.vault_path
+        sm = SyncManager(
+            kb_path=self._get_kb_path(),
+            vault_path=target_vault,
         )
+        return sm.sync_to_vault(kb_entry_id)
     
     def sync_from_vault(
         self,
         vault_path: str | Path
     ) -> int:
         """
-        Sync a vault note back to KB (placeholder for KB integration).
+        Sync a vault note back to KB.
+        
+        Delegates to SyncManager for bidirectional sync support.
         
         Args:
             vault_path: Path to the vault note
         
         Returns:
             KB entry ID
-        
-        Raises:
-            NotImplementedError: KB integration not yet implemented
         """
-        raise NotImplementedError(
-            "KB sync not yet implemented - requires KB database integration"
+        from .sync_manager import SyncManager
+        
+        sm = SyncManager(
+            kb_path=self._get_kb_path(),
+            vault_path=self.vault_path,
         )
+        return sm.sync_from_vault(Path(vault_path))
+    
+    def _get_kb_path(self) -> Path:
+        """Resolve the KB database path."""
+        try:
+            from kb.base.config import KBConfig
+            return Path(KBConfig.get_instance().db_path)
+        except (ImportError, Exception):
+            # Fallback: look for biblio.db near the vault
+            return self.vault_path.parent / "biblio.db"
     
     # =========================================================================
     # INTERNAL HELPERS

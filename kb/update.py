@@ -28,6 +28,10 @@ GITHUB_REPO = "Minenclown/kb-framework"
 VERSION_FILE = Path(__file__).parent / "version.py"
 BACKUP_DIR = Path.home() / ".knowledge" / "backup"
 
+# Allowed pattern for GitHub repo names (owner/repo format)
+import re
+_GITHUB_REPO_PATTERN = re.compile(r'^[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-.]+$')
+
 
 def get_current_version():
     """Read current installed version."""
@@ -39,10 +43,17 @@ def get_current_version():
     return "0.0.0"
 
 
-def get_latest_release():
+def get_latest_release(repo=None):
     """Fetch latest release info from GitHub API."""
+    repo = repo or GITHUB_REPO
+    
+    # Validate repo format to prevent injection into URL
+    if not _GITHUB_REPO_PATTERN.match(repo):
+        print(f"❌ Invalid repository format: {repo}. Expected 'owner/repo' with alphanumeric characters.")
+        return None
+    
     try:
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+        url = f"https://api.github.com/repos/{repo}/releases/latest"
         req = urllib.request.Request(url)
         req.add_header("Accept", "application/vnd.github.v3+json")
         req.add_header("User-Agent", "KB-Framework-Updater")
@@ -163,6 +174,47 @@ def download_and_install(release_info, kb_path, scripts_path):
     return True
 
 
+def _validate_script_path(script_path: Path, allowed_parent: Path) -> Path:
+    """
+    Validate a script path is safe to execute.
+    
+    Ensures:
+    - Path is resolved and within the allowed parent directory
+    - Path points to an existing .py file
+    - No path traversal (../) attacks
+    
+    Args:
+        script_path: Path to validate
+        allowed_parent: Parent directory the script must reside in
+    
+    Returns:
+        Resolved, validated path
+    
+    Raises:
+        ValueError: If path is invalid or outside allowed directory
+    """
+    resolved = script_path.resolve()
+    allowed_resolved = allowed_parent.resolve()
+    
+    # Check path is within allowed directory
+    try:
+        resolved.relative_to(allowed_resolved)
+    except ValueError:
+        raise ValueError(
+            f"Script path {resolved} is outside allowed directory {allowed_resolved}"
+        )
+    
+    # Check it's a .py file
+    if resolved.suffix != '.py':
+        raise ValueError(f"Script must be a .py file, got: {resolved}")
+    
+    # Check it exists
+    if not resolved.is_file():
+        raise ValueError(f"Script does not exist: {resolved}")
+    
+    return resolved
+
+
 def update_database_schema(kb_path):
     """Run any necessary database migrations."""
     db_path = Path.home() / ".knowledge" / "knowledge.db"
@@ -174,7 +226,11 @@ def update_database_schema(kb_path):
     if migrate_script.exists():
         print("🔄 Running database migrations...")
         try:
-            subprocess.run([sys.executable, str(migrate_script)], check=True)
+            # Validate script path to prevent command injection
+            safe_path = _validate_script_path(migrate_script, kb_path)
+            subprocess.run([sys.executable, str(safe_path)], check=True)
+        except ValueError as e:
+            print(f"⚠️  Migration script validation failed: {e}")
         except subprocess.CalledProcessError:
             print("⚠️  Migration had issues, but continuing...")
 
@@ -198,7 +254,7 @@ def main(args=None):
     print(f"📍 Current version: {current}")
     
     print("🌐 Checking GitHub for latest release...")
-    latest = get_latest_release()
+    latest = get_latest_release(args.repo)
     
     if not latest:
         print("❌ Could not fetch release info")

@@ -214,10 +214,10 @@ def check_chroma_sqlite_sync(conn, chroma_path):
     """Vergleicht ChromaDB mit SQLite."""
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from library.knowledge_base.chroma_integration import ChromaIntegration
+    from library.knowledge_base.chroma_integration import get_chroma
     
     try:
-        chroma = ChromaIntegration(chroma_path=chroma_path)
+        chroma = get_chroma(chroma_path=chroma_path)
         chroma_count = chroma.sections_collection.count()
         
         cursor = conn.execute("SELECT COUNT(*) FROM file_sections WHERE file_path IS NOT NULL")

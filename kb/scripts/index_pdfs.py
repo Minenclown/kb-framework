@@ -339,11 +339,11 @@ class PDFIndexer:
         self._chroma = None
     
     def _get_chroma(self):
-        """Lazy-load ChromaDB integration."""
+        """Lazy-load ChromaDB integration (singleton)."""
         if self._chroma is None:
             sys.path.insert(0, self.CHROMA_INTEGRATION_PATH)
-            from chroma_integration import ChromaIntegration
-            self._chroma = ChromaIntegration()
+            from chroma_integration import get_chroma
+            self._chroma = get_chroma()
         return self._chroma
     
     def _embed_sections_for_file(self, file_path: str, file_id: str) -> int:

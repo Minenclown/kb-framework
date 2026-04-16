@@ -1,6 +1,6 @@
 # KB Framework - OpenClaw Skill
 
-**Version:** 1.1.0  
+**Version:** 1.1.1  
 **Category:** Knowledge Base / Search  
 **Requires:** Python 3.9+, SQLite, ChromaDB  
 
@@ -13,6 +13,9 @@ A complete Knowledge Base with:
 - **Automatic Indexing** (Markdown, PDF, OCR)
 - **SQLite + ChromaDB** Integration
 - **Daily Audits** for data quality
+- **LLM Integration** (Ollama/Gemma4, HuggingFace Transformers) for essence generation, reports, file watching, and scheduled jobs *(Neu in 1.1.1)*
+- **EngineRegistry** – Central singleton for multi-engine support *(Neu in 1.1.1)*
+- **Generator Parallel Support** – primary_first, aggregate, compare *(Neu in 1.1.1)*
 
 ---
 
@@ -63,6 +66,27 @@ with BiblioIndexer("/path/to/knowledge.db") as idx:
 from kb.library.knowledge_base.hybrid_search import HybridSearch
 hs = HybridSearch()
 results = hs.search("Your search term", limit=10)
+
+# LLM Engine API (Neu in 1.1.1)
+from kb.biblio import LLMConfig, EngineRegistry, create_engine
+
+config = LLMConfig.get_instance()
+print(f"Source: {config.model_source}")
+
+# Create engine (auto mode mit HF primary + Ollama fallback)
+engine = create_engine(config)
+
+# Registry für Multi-Engine Zugriff
+registry = EngineRegistry.get_instance(config)
+primary, secondary = registry.get_both()
+
+# Generator Parallel Support
+from kb.biblio.generator import EssenzGenerator
+generator = EssenzGenerator()
+result = await generator.generate_essence(
+    topic="Topic",
+    parallel_strategy="primary_first"  # primary_first, aggregate, compare
+)
 ```
 
 ### CLI (Recommended)
@@ -79,6 +103,15 @@ kb search "machine learning"     # Search knowledge base
 kb audit                         # Run full audit
 kb ghost                         # Find orphaned entries
 kb warmup                        # Preload ChromaDB model
+kb llm status                    # LLM system status
+kb llm generate essence "topic" # Generate an essence
+kb llm generate report daily     # Generate a daily report
+kb llm watch start               # Start file watcher
+kb llm scheduler list            # List scheduled jobs
+kb llm config show               # Show LLM config
+kb llm engine status              # Show all engine status (Neu in 1.1.1)
+kb llm engine switch huggingface # Switch to HuggingFace (Neu in 1.1.1)
+kb llm engine test               # Test both engines (Neu in 1.1.1)
 ```
 
 ### Legacy Python Scripts
@@ -107,8 +140,18 @@ kb-framework/
 ├── README.md                   # Detailed documentation
 ├── kb/
 │   ├── indexer.py              # Core Indexer (BiblioIndexer)
-│   ├── commands/               # CLI Commands: index, sync, audit, ghost, warmup, search
+│   ├── commands/               # CLI Commands: index, sync, audit, ghost, warmup, search, llm, engine
 │   ├── base/                    # Core: config.py, db.py, logger.py, command.py
+│   ├── biblio/                  # LLM Integration (Neu in 1.1.1)
+│   │   ├── engine/              # Engine modules
+│   │   │   ├── registry.py      # EngineRegistry Singleton (Neu in 1.1.1)
+│   │   │   ├── factory.py       # Engine Factory (Neu in 1.1.1)
+│   │   │   ├── base.py          # BaseLLMEngine Interface
+│   │   │   ├── ollama_engine.py # Ollama Engine
+│   │   │   └── transformers_engine.py # HuggingFace Engine (Neu in 1.1.1)
+│   │   ├── generator/           # Generators: essence, report
+│   │   ├── scheduler/           # Task scheduler
+│   │   └── config.py           # LLMConfig Singleton
 │   ├── library/
 │   │   └── knowledge_base/
 │   │       ├── hybrid_search.py       # Hybrid Search (semantic + keyword)

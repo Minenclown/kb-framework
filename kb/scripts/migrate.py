@@ -15,7 +15,7 @@ def get_db_version(conn):
     try:
         cursor = conn.execute("SELECT version FROM schema_version")
         return cursor.fetchone()[0]
-    except:
+    except Exception:
         return 0
 
 

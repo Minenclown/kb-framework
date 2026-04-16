@@ -1,5 +1,5 @@
 # KB Framework - Funktionsdokumentation
-**Version:** 1.1.0  
+**Version:** 1.1.1  
 **Stand:** 2026-04-15
 
 ---
@@ -11,8 +11,9 @@
 4. [Obsidian Module (`kb.obsidian`)](#4-obsidian-module-kbobsidian)
 5. [Knowledge Base Module (`kb.library.knowledge_base`)](#5-knowledge-base-module-kblibraryknowledge_base)
 6. [Indexer & Updater](#6-indexer--updater)
-7. [Abhängigkeiten](#7-abhängigkeiten)
-8. [Nutzungsbeispiele](#8-nutzungsbeispiele)
+7. [LLM Module (`kb.llm`)](#7-llm-module-kbllm)
+8. [Abhängigkeiten](#9-abhängigkeiten)
+9. [Nutzungsbeispiele](#10-nutzungsbeispiele)
 
 ---
 
@@ -641,7 +642,118 @@ main([])
 
 ---
 
-## 7. Abhängigkeiten
+## 7. LLM Module (`kb.llm`)  *(Neu in 1.1.1)*
+
+### LLMConfig (`kb.llm.config`)
+
+**Singleton für LLM-Konfiguration (Ollama/Gemma4).**
+
+```python
+from kb.llm.config import LLMConfig
+
+config = LLMConfig.get_instance()
+config.model           # Modell-Name (default: gemma3:4b)
+config.ollama_url      # Ollama Server URL
+config.temperature     # Generation temperature
+config.essences_path   # Pfad für Essenzen
+config.reports_path   # Pfad für Reports
+```
+
+### OllamaEngine (`kb.llm.engine`)
+
+**LLM-Engine mit Ollama-Backend.**
+
+```python
+from kb.llm.engine import OllamaEngine
+
+engine = OllamaEngine.get_instance()
+available = engine.is_available()       # Modell verfügbar?
+response = await engine.generate(prompt) # Text generieren
+stream = await engine.stream(prompt)     # Streaming-Antwort
+```
+
+### EssenzGenerator (`kb.llm.generator.essence_generator`)
+
+**Erstellt Wissens-Essenzen aus Quelldokumenten.**
+
+```python
+from kb.llm.generator import EssenzGenerator
+
+generator = EssenzGenerator()
+result = await generator.generate_essence(topic="Thema", source_files=[...])
+# result.success, result.essence_hash, result.essence_path, result.model_used
+```
+
+### ReportGenerator (`kb.llm.generator.report_generator`)
+
+**Erstellt täglich/wöchentlich/monatlich Berichte.**
+
+```python
+from kb.llm.generator import ReportGenerator
+
+generator = ReportGenerator()
+result = await generator.generate_daily_report()
+result = await generator.generate_weekly_report()
+result = await generator.generate_monthly_report()
+```
+
+### FileWatcher (`kb.llm.watcher`)
+
+**Überwacht Verzeichnisse auf neue Dateien.**
+
+```python
+from kb.llm.watcher import FileWatcher
+
+watcher = FileWatcher()
+await watcher.run(interval_minutes=30)  # Startet Überwachung
+watcher.stop()                           # Stoppt
+stats = watcher.get_stats()              # Status-Info
+```
+
+### TaskScheduler (`kb.llm.scheduler`)
+
+**Cron-ähnlicher Scheduler für LLM-Jobs.**
+
+```python
+from kb.llm.scheduler import TaskScheduler
+
+scheduler = TaskScheduler()
+await scheduler.start()                  # Startet Scheduler
+jobs = scheduler.list_jobs()            # Jobs auflisten
+result = await scheduler.run_job("id")   # Job manuell triggern
+await scheduler.shutdown()               # Stoppen
+```
+
+### LLMContentManager (`kb.llm.content_manager`)
+
+**Verwaltet Essenzen und Reports (CRUD + Storage).**
+
+```python
+from kb.llm.content_manager import LLMContentManager
+
+manager = LLMContentManager()
+essences = await manager.list_essences(limit=10)
+reports = await manager.list_reports(report_type="daily")
+essence = await manager.get_essence_by_topic("Thema")
+```
+
+### LLMCommand (`kb.commands.llm`)
+
+**CLI-Integration für alle LLM-Funktionen.**
+
+```bash
+kb llm status                               # System-Status
+kb llm generate essence "Thema"             # Essenz erstellen
+kb llm generate report daily                # Report erstellen
+kb llm watch start|stop|status              # FileWatcher
+kb llm scheduler start|stop|list|trigger ID  # Scheduler
+kb llm list essences|reports               # Auflisten
+kb llm config [show|set key value]          # Konfiguration
+```
+
+---
+
+## 9. Abhängigkeiten
 
 ### Modul-Diagramm
 
@@ -680,7 +792,7 @@ kb.base
 
 ---
 
-## 8. Nutzungsbeispiele
+## 10. Nutzungsbeispiele
 
 ### CLI Nutzung
 

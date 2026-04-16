@@ -1,6 +1,6 @@
 # KB Framework – Deterministic Context Mapping
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.1-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -26,11 +26,220 @@ KB Framework tracks **exact source locations** — not just documents, but line 
 
 Every search returns **pointers**, not paragraphs. The agent can cite, verify, and trace back every piece of context.
 
-**What you get:**
-- Line-level precision (not document-level)
-- Verifiable citations with `file:line` format
-- ChromaDB embeddings indexed by source location
-- SQLite for metadata + relationship tracking
+## Features
+
+### 🎯 Precision over Recall
+- **ChromaDB Integration** – Vector search for semantic similarity
+- **Hybrid Search** – Combined 60% semantic + 40% keyword search
+- **PDF Indexing** – Automatic PDF document indexing with OCR support
+- **Obsidian Vault Support** – WikiLinks, Tags, Frontmatter, Embeds, Backlinks
+
+### 🔗 Obsidian Integration
+- Parse WikiLinks, Tags, Frontmatter, Embeds
+- Backlink index with bidirectional linking
+- Vault-wide search with source tracking
+
+### 🔄 Always in Sync
+- ChromaDB ↔ SQLite synchronization
+- Orphan detection (entries in vector DB without source file)
+- Audit reports with CSV export
+
+### 🚀 Agent-Ready
+- Drop-in Python API for your agents
+- Context pointers work with any LLM
+- No more "according to your notes... (unverified)"
+
+### 🧠 LLM Engine Management (Neu in 1.1.1)
+- **EngineRegistry** – Central singleton registry for all LLM engines
+- **Multi-Engine Support** – Ollama, HuggingFace Transformers, or both
+- **Auto Mode** – HF primary with Ollama fallback (Lumen's default)
+- **Compare Mode** – Both engines side-by-side for result comparison
+- **TransformersEngine** – Local model loading with quantization support (4-bit, 8-bit)
+- **Config Switch** – Runtime engine switching via CLI or API
+
+## Quick Start
+
+```bash
+# Installation
+pip install -r requirements.txt
+./install.sh
+
+# Use CLI
+kb index /path/to/docs          # Index documents
+kb search "your query"          # Search knowledge base
+kb sync                         # Sync ChromaDB with SQLite
+kb audit                        # Run full audit
+kb ghost                        # Find orphaned entries
+kb warmup                       # Preload embedding model
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `kb index <path>` | Index a file or directory recursively |
+| `kb search "<query>"` | Search knowledge base with hybrid search |
+| `kb sync` | Sync ChromaDB with SQLite (add `--stats`, `--dry-run`, `--delete-orphans`) |
+| `kb audit` | Run full KB audit (add `-v` for verbose, `--csv <file>` for export) |
+| `kb ghost` | Find orphaned entries in ChromaDB without source file |
+| `kb warmup` | Preload embedding model into memory |
+| `kb llm status` | Show LLM system status (model, jobs, recent essences) |
+| `kb llm generate essence \| report` | Generate essences or reports via LLM |
+
+### LLM Engine Management (Neu in 1.1.1)
+
+The `kb llm engine` commands let you inspect and switch between LLM backends at runtime:
+
+| Command | Description |
+|---------|-------------|
+| `kb llm engine status` | Show status of all engines (primary, secondary, available) |
+| `kb llm engine list` | List all available engine types |
+| `kb llm engine info <name>` | Detailed info about a specific engine |
+| `kb llm engine switch <source>` | Switch model source (ollama/huggingface/auto/compare) |
+| `kb llm engine test` | Test both engines with a sample prompt |
+
+**Examples:**
+
+```bash
+# Check current engine status
+kb llm engine status
+# Output:
+# Engine Registry Status
+# =====================
+# Primary:   huggingface (google/gemma-2-2b-it) ✓
+# Secondary: ollama (gemma4:e2b) ✓
+# Mode:      auto
+
+# Switch to Ollama-only mode
+kb llm engine switch ollama
+
+# Switch to auto mode (HF primary, Ollama fallback)
+kb llm engine switch auto
+
+# Switch to compare mode (both engines, diff-view)
+kb llm engine switch compare
+
+# Test both engines
+kb llm engine test
+# Output:
+# [ollama]       ✓  gemma4:e2b         0.45s
+# [huggingface]  ✓  google/gemma-2-2b-it  1.23s
+
+# Detailed engine info
+kb llm engine info huggingface
+```
+
+**Config via environment variables:**
+
+```bash
+export KB_LLM_MODEL_SOURCE=auto          # ollama|huggingface|auto|compare
+export KB_LLM_OLLAMA_MODEL=gemma4:e2b     # Ollama model name
+export KB_LLM_HF_MODEL=google/gemma-2-2b-it  # HuggingFace model
+export KB_LLM_PARALLEL_MODE=true          # Enable parallel generation
+export KB_LLM_PARALLEL_STRATEGY=compare   # primary_first|aggregate|compare
+```
+
+**Python API for engine switching:**
+
+```python
+from kb.biblio.config import LLMConfig
+from kb.biblio.engine.registry import EngineRegistry
+
+# Get current registry
+registry = EngineRegistry.get_instance()
+print(f"Primary: {registry.primary_provider}")
+print(f"Secondary: {registry.get_secondary()}")
+
+# Switch model source at runtime
+LLMConfig.reload(model_source="compare", hf_model_name="google/gemma-2-2b-it")
+EngineRegistry.reset()
+registry = EngineRegistry.get_instance()
+
+# Access both engines
+primary, secondary = registry.get_both()
+print(f"Primary: {primary.get_model_name()}")
+print(f"Secondary: {secondary.get_model_name() if secondary else 'N/A'}")
+```
+
+### LLM Integration
+
+- **EssenzGenerator** – Automatically distills source documents into concise "essences" (knowledge summaries)
+- **ReportGenerator** – Creates daily/weekly/monthly reports from indexed content
+- **FileWatcher** – Monitors directories for new files and auto-indexes them
+- **TaskScheduler** – Schedules recurring LLM jobs (essence generation, reports) with cron-like expressions
+
+**Installation:**
+```bash
+pip install -r requirements.txt
+# For HuggingFace support (optional):
+pip install -r requirements-transformers.txt
+```
+
+**Quickstart:**
+```bash
+kb llm status                              # Check model availability & job status
+kb llm generate essence "Thema"            # Generate an essence for a topic
+kb llm generate report daily               # Generate a daily report
+kb llm watch start                         # Start file watcher
+kb llm scheduler list                      # List scheduled jobs
+kb llm config show                         # Show LLM configuration
+kb llm engine status                       # Show engine status (all engines)
+kb llm engine switch huggingface           # Switch active engine
+kb llm engine test                          # Test both engines
+```
+
+**CLI Overview (11 Commands):**
+
+| Command | Description |
+|---------|-------------|
+| `kb index` | Index files/directories |
+| `kb search` | Hybrid search (semantic + keyword) |
+| `kb sync` | Sync ChromaDB with SQLite |
+| `kb audit` | Full integrity check |
+| `kb ghost` | Find orphaned entries |
+| `kb warmup` | Preload embedding model |
+| `kb llm` | LLM integration (essences, reports, watcher, scheduler, config) |
+| `kb update` | Auto-updater for GitHub releases |
+| `kb llm engine status` | Show status of all engines |
+| `kb llm engine switch` | Switch model source (ollama/huggingface/auto/compare) |
+| `kb llm engine test` | Test both engines |
+
+### LLM Python API
+
+```python
+from kb.biblio.config import LLMConfig
+from kb.biblio.engine.factory import create_engine
+from kb.biblio.engine.registry import EngineRegistry
+
+# Configure
+config = LLMConfig.get_instance()
+print(f"Model: {config.model}, Source: {config.model_source}")
+
+# Create engine (single-source or auto mode)
+engine = create_engine(config)
+
+# Access registry for multi-engine modes
+registry = EngineRegistry.get_instance()
+print(f"Primary: {registry.primary_provider}")
+
+# Compare/Auto mode: access both engines
+primary, secondary = registry.get_both()
+print(f"Primary: {primary.get_model_name()}, Secondary: {secondary.get_model_name() if secondary else 'N/A'}")
+
+# Generate an essence
+from kb.biblio.generator.essence_generator import EssenzGenerator
+
+generator = EssenzGenerator()
+result = await generator.generate_essence(topic="Vitamin D")
+print(f"Hash: {result.essence_hash}, Path: {result.essence_path}")
+
+# Generate a report
+from kb.biblio.generator.report_generator import ReportGenerator
+
+report_gen = ReportGenerator()
+report = await report_gen.generate_daily_report()
+print(f"Sources: {report.sources_count}, Duration: {report.duration_ms}ms")
+```
 
 ## Demo
 
@@ -56,66 +265,39 @@ The agent receives pointers it can cite directly:
 
 You can verify: open the file, go to line 142, read the source.
 
-## Features
-
-### 🎯 Precision over Recall
-- **Line-level indexing** — Store embeddings with exact source locations
-- **Pointer output** — Every search returns `file:line` citations
-- **Verifiable context** — Agents can cite, humans can verify
-
-### 🔗 Obsidian Integration
-- Parse WikiLinks, Tags, Frontmatter, Embeds
-- Backlink index with bidirectional linking
-- Vault-wide search with source tracking
-
-### 🔄 Always in Sync
-- ChromaDB ↔ SQLite synchronization
-- Orphan detection (entries in vector DB without source file)
-- Audit reports with CSV export
-
-### 🚀 Agent-Ready
-- Drop-in Python API for your agents
-- Context pointers work with any LLM
-- No more "according to your notes... (unverified)"
-
 ## Installation
 
 ```bash
+# Clone to OpenClaw workspace
 git clone https://github.com/Minenclown/kb-framework.git ~/.openclaw/kb
-cd ~/.openclaw/kb && pip install -r requirements.txt
+
+# Or manually:
+cp -r kb-framework ~/.openclaw/kb
+
+# Install core dependencies
+pip install -r requirements.txt
+
+# For HuggingFace Transformers LLM support (optional):
+pip install -r requirements-transformers.txt
+
+# For development (includes core + test dependencies):
+pip install -r requirements-dev.txt
+
+./install.sh
 ```
 
-For CLI access, add to your `.bashrc`:
+For global CLI access, add to your `.bashrc`:
 ```bash
-echo 'alias kb="~/.openclaw/kb/kb.sh"' >> ~/.bashrc
+alias kb="~/.openclaw/kb/kb.sh"
 source ~/.bashrc
 ```
 
-## Usage
+## Python API
 
-```bash
-kb sync                    # Sync ChromaDB with SQLite
-kb sync --dry-run          # Preview changes without applying
-kb sync --stats            # Show sync statistics
-
-kb audit                   # Full KB audit (summary)
-kb audit -v                # Verbose output
-kb audit --csv report.csv  # Export as CSV
-
-kb ghost                   # Find orphaned entries (in ChromaDB but no source file)
-kb ghost --scan-dirs ~/docs,~/notes   # Scan additional directories
-kb ghost --purge           # Remove orphaned entries
-
-kb warmup                  # Preload embedding model
-kb warmup --model <name>   # Specify model to load
-```
-
-### Python API
-
-#### Search (HybridSearch)
+### Search (HybridSearch)
 
 ```python
-from kb.library.knowledge_base import HybridSearch
+from kb.knowledge_base import HybridSearch
 
 # Initialize search
 search = HybridSearch()
@@ -124,46 +306,46 @@ search = HybridSearch()
 results = search.search("Vitamin D Mangel", limit=5)
 
 for r in results:
-    print(f"{r.file_path}:{r.section_id} [{r.score:.2f}]")
+    print(f"{r.file_path}:{r.section_id} [{r.combined_score:.2f}]")
     print(f"  → {r.content_preview[:80]}...")
 ```
 
-#### ChromaDB Integration
+### ChromaDB Integration
 
 ```python
-from kb.library.knowledge_base import ChromaIntegration, embed_text
+from kb.knowledge_base import ChromaIntegration, embed_text
 
 # Get singleton instance
-chroma = ChromaIntegration()
+chroma = ChromaIntegration.get_instance()
 
 # Embed text directly
 vector = embed_text("Your text here")
 
-# Query with filters
-results = chroma.query(
-    collection_name="kb_sections",
-    query_texts=["query"],
+# Query a collection
+collection = chroma.sections_collection
+results = collection.query(
+    query_embeddings=[embed_text("your query")],
     n_results=5,
     where={"file_path": {"$contains": "health"}}
 )
 ```
 
-#### Text Chunking
+### Text Chunking
 
 ```python
-from kb.library.knowledge_base import SentenceChunker, chunk_file
+from kb.knowledge_base import SentenceChunker, chunk_document
 
 # Configure chunker
 chunker = SentenceChunker(max_chunk_size=500, overlap=50)
 
 # Chunk a single text
-chunks = chunker.chunk("Long text content here...")
+chunks = chunker.chunk_text("Long text content here...")
 
-# Chunk an entire file
-file_chunks = chunk_file("/path/to/document.md", chunker=chunker)
+# Chunk an entire document
+file_chunks = chunk_document("/path/to/document.md", chunker=chunker)
 ```
 
-#### Obsidian Vault
+### Obsidian Vault
 
 ```python
 from kb.obsidian import ObsidianVault
@@ -178,20 +360,16 @@ backlinks = vault.find_backlinks("Notes/Meeting.md")
 results = vault.search("Project X")
 ```
 
-#### Module Hierarchy
+### Module Hierarchy
 
 ```python
-# Top-level access
-from kb import KBConfig, KBLogger, KBConnection
-
-# Knowledge base library
-from kb.library.knowledge_base import HybridSearch
-from kb.library import ChromaIntegration
-
-# Base modules
+# Base modules (import directly from subpackages)
 from kb.base.config import KBConfig
 from kb.base.logger import KBLogger
 from kb.base.db import KBConnection
+
+# Knowledge base (re-exports from src.library via kb.knowledge_base)
+from kb.knowledge_base import HybridSearch, ChromaIntegration
 
 # Obsidian integration
 from kb.obsidian import ObsidianVault

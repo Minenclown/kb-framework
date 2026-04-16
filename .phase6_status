@@ -1,0 +1,51 @@
+# Phase 6: CLI-Integration — Status
+
+**Datum:** 2026-04-15
+**Status:** ✅ ABGESCHLOSSEN
+
+## Implementierte Befehle
+
+| Befehl | Beschreibung | Status |
+|--------|-------------|--------|
+| `kb llm status` | LLM-System Status (Modell, Scheduler, Essenzen, Reports, Watcher) | ✅ |
+| `kb llm generate essence <topic>` | Manuelle Essenz-Erstellung | ✅ |
+| `kb llm generate essence --source-files` | Spezifische Quellen | ✅ |
+| `kb llm generate essence --batch T1 T2` | Batch-Erstellung | ✅ |
+| `kb llm generate report <daily\|weekly\|monthly>` | Report-Erstellung | ✅ |
+| `kb llm watch start\|stop\|status` | File-Watcher Steuerung | ✅ |
+| `kb llm scheduler start\|stop\|list\|trigger <job>` | Scheduler Steuerung | ✅ |
+| `kb llm list essences` | Alle Essenzen auflisten | ✅ |
+| `kb llm list essences --topic-filter` | Themen-Filter | ✅ |
+| `kb llm list essences --date-range` | Datumsbereich-Filter | ✅ |
+| `kb llm list essences --json` | JSON-Ausgabe | ✅ |
+| `kb llm list reports` | Alle Reports auflisten | ✅ |
+| `kb llm list reports --type` | Typ-Filter | ✅ |
+| `kb llm list reports --json` | JSON-Ausgabe | ✅ |
+| `kb llm config show` | Config anzeigen | ✅ |
+| `kb llm config set <key> <value>` | Config setzen (in-memory) | ✅ |
+
+## Dateien
+
+| Datei | Änderung |
+|-------|---------|
+| `kb/commands/llm.py` | NEU — LLMCommand mit allen 8 Befehlen |
+| `kb/commands/__init__.py` | LLMCommand in `_ensure_commands_loaded`, `reload_commands`, `__all__` |
+| `kb/__main__.py` | LLM-Beispiele in Help-Epilog, Architektur-Docstring |
+
+## Architektur
+
+- **BaseCommand-Pattern:** `LLMCommand` erbt `BaseCommand`, nutzt `@register_command`
+- **Nested Subparsers:** `kb llm <action>` → `kb llm generate <essence|report>` → `kb llm list <essences|reports>`
+- **Async-Bridge:** `_run_async()` wrapped `asyncio.run()` für alle async-Methoden
+- **ProgressSpinner:** Stderr-Spinner für lange Operationen (Essenzen, Reports, Scheduler-Trigger)
+- **Exit Codes:** 0=success, 1=validation, 2=execution (BaseCommand-Konvention)
+- **DB-Validation:** Überschrieben (`validate() → True`) — LLM-Commands brauchen kein KB SQLite
+
+## Getestet
+
+- ✅ `python3 -c "from kb.commands.llm import LLMCommand"` — Import OK
+- ✅ `kb llm --help` — Alle 6 Subcommands sichtbar
+- ✅ `kb llm generate essence --help` — topic, --source-files, --batch
+- ✅ `kb llm list essences --help` — --topic-filter, --date-range, --limit, --json
+- ✅ `kb llm config --help` — show|set mit key/value
+- ✅ `kb --help` — llm in Command-Liste

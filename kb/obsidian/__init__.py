@@ -29,6 +29,18 @@ from .writer import (
     update_frontmatter,
 )
 
+from .sync_manager import SyncManager
+from .vault_reader import VaultReader
+from .sync_state import SyncState
+from .conflict import (
+    ConflictResolution,
+    VaultSyncError,
+    FilePermissionError,
+    MalformedFrontmatterError,
+    MissingRequiredFieldError,
+    SyncConflictError,
+)
+
 __all__ = [
     # Parser
     'WIKILINK_PATTERN',
@@ -48,4 +60,14 @@ __all__ = [
     'update_frontmatter',
     # Vault
     'ObsidianVault',
+    # Sync
+    'SyncManager',
+    'VaultReader',
+    'SyncState',
+    'ConflictResolution',
+    'VaultSyncError',
+    'FilePermissionError',
+    'MalformedFrontmatterError',
+    'MissingRequiredFieldError',
+    'SyncConflictError',
 ]

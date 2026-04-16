@@ -1,3 +1,104 @@
+# Changelog
+
+## [1.1.1] - 2026-04-16
+
+### 🚨 Breaking Changes
+
+- **EngineRegistry ist jetzt zentraler Singleton** – Engine-Zugriff nur noch über `EngineRegistry.get_instance()` statt direkter `OllamaEngine.get_instance()` Aufrufe
+- **Import-Pfade geändert** – `kb.llm` → `kb.biblio` für Generator-Klassen
+- **`kb.config.py` entfernt** – Alle relevanten Imports wurden auf `kb.base.config` umgestellt (W1, W2)
+
+### Features
+
+- **EngineRegistry**: Neue zentrale Registry für LLM-Engines mit Singleton-Pattern
+  - Multi-Engine Support: Ollama + HuggingFace Transformers gleichzeitig
+  - `model_source` Config: `auto`, `ollama`, `huggingface`, `compare`
+  - `EngineRegistry.get_instance()` statt direkter Engine-Erstellung
+  - `registry.get_primary()`, `registry.get_secondary()`, `registry.get_both()`
+  
+- **Config-Switch**: `model_source` "auto" als neuer Default
+  - Auto Mode: HF primary + Ollama fallback (Lumen's Entscheidung)
+  - Compare Mode: Beide Engines für Diff/Merge
+  - `parallel_mode`, `parallel_strategy` für Generator Parallel Support
+  
+- **Neue Config-Keys**:
+  - `ollama_model` – Ollama-Modell (default: `gemma4:e2b`)
+  - `ollama_timeout` – Timeout in Sekunden (default: `120`)
+  - `ollama_temperature` – Temperature 0-2 (default: `0.7`)
+  - `model_source` – Engine-Auswahl (default: `auto`)
+  - `parallel_mode` – Parallel-Ausführung (default: `False`)
+  - `parallel_strategy` – `primary_first`, `aggregate` oder `compare` (default: `primary_first`)
+  
+- **Neue CLI-Befehle** (`kb llm engine`):
+  - `kb llm engine status` – Status aller Engines anzeigen
+  - `kb llm engine switch <source>` – Engine wechseln (ollama/huggingface/auto/compare)
+  - `kb llm engine test` – Beide Engines testen
+  - `kb llm engine list` – Verfügbare Engines auflisten
+  - `kb llm engine info <name>` – Detaillierte Info zu einer Engine
+  
+- **TransformersEngine**: Local Hugging Face Transformers support
+  - Direct model loading ohne externe API
+  - 8-bit und 4-bit quantization support (bitsandbytes)
+  - Auto device detection (CUDA/MPS/CPU)
+  - Memory-efficient model loading/unloading
+  - Streaming und batch generation support
+  
+- **Generator Parallel Support**:
+  - `primary_first`: HF zuerst, bei Fehler Ollama
+  - `aggregate`: Beide Engines, Ergebnisse zusammenführen
+  - `compare`: Beide Engines, Unterschiede anzeigen
+
+### Technical
+
+- Complete engine factory pattern implementation
+- Unified interface for Ollama and Transformers engines
+- Thread-safe EngineRegistry mit Locking
+
+### Test Coverage (1.1.1)
+
+- **45 Tests** – EngineRegistry (`test_engine_registry.py`)
+  - Singleton pattern, primary/secondary engine access, auto/compare/ollama/hf modes
+  - `reset()`, `is_engine_available()`, `get_both()`, `repr()`, error handling
+  - EngineFactory Protocol & Dependency Injection
+  - Thread-safe singleton creation
+- **38 Tests** – Model Source Config (`test_model_source.py`)
+  - Validation: `ollama`, `huggingface`, `auto`, `compare`, quantization, `hf_model_name` required
+  - Config reload, environment variable overrides, `to_dict()` serialization, token masking
+  - Fallback behavior: HF failure → Ollama promotion, neither available → error
+  - Parallel strategy validation
+- **41 Tests** – Parallel Mode & Diff/Merge (`test_parallel_mode.py`)
+  - `diff_essences()`, `merge_essences()`: item-level comparison, union merge, deduplication
+  - `diff_reports()`, `merge_reports()`: line-level text diff, section merge
+  - `DiffResult`, `DiffEntry`, `ParallelResult` dataclasses
+  - `__init_parallel__()`, `_should_use_parallel()`, strategy initialization
+- **Gesamt: 124 neue Tests** (alle grün ✅)
+
+### Fixes (aus 3 Analyse-Runden)
+
+- Deadlock issues in ChromaDB sync resolved
+- Thread-safety improvements for concurrent DB access
+- kb/config.py fälschlicherweise erstellt → wieder entfernt
+- Orphan detection verbessert
+- Fallback-Kette für HybridSearch dokumentiert (Semantic → Keyword → Fallback)
+
+---
+
+## [1.1.1] - 2026-04-15
+
+### Features
+- **LLM Integration**: Ollama/Gemma4 engine for knowledge extraction (`kb.llm` package)
+- **EssenzGenerator**: Automatic essence generation from source documents
+- **ReportGenerator**: Daily/weekly/monthly reports from indexed content
+- **FileWatcher**: Monitors directories for new files, triggers auto-indexing
+- **TaskScheduler**: Cron-like scheduling for recurring LLM jobs
+- **LLMCommand**: Full CLI integration with 6 subcommands (`kb llm status|generate|watch|scheduler|list|config`)
+
+### Fixes
+- Deadlock issues in ChromaDB sync resolved
+- Thread-safety improvements for concurrent DB access
+
+---
+
 # Phase 6: Obsidian Write-Funktion
 
 **Status:** Geplant

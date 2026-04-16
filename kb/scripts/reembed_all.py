@@ -19,11 +19,11 @@ from datetime import datetime
 
 # Add framework to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "knowledge_base"))
 
+from kb.base.config import KBConfig
 from kb.indexer import BiblioIndexer
-from kb.library.knowledge_base.chroma_integration import ChromaIntegration
-from kb.library.knowledge_base.embedding_pipeline import EmbeddingPipeline
+from kb.knowledge_base.chroma_integration import get_chroma
+from kb.knowledge_base.embedding_pipeline import EmbeddingPipeline
 
 # Logging
 logging.basicConfig(
@@ -34,24 +34,48 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_stats():
-    """Fetch current statistics."""
-    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
-    chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
+def _get_paths():
+    """Resolve DB and ChromaDB paths from KBConfig."""
+    config = KBConfig.get_instance()
+    return config.db_path, config.chroma_path
+
+
+def get_stats() -> dict:
+    """Collect embedding gap statistics from SQLite and ChromaDB.
+
+    Queries both storage backends and calculates the coverage gap:
+    - sqlite_sections: Total sections in the knowledge base
+    - sqlite_files: Total indexed files
+    - chroma_sections: Sections with embeddings in ChromaDB
+    - gap: Difference (sections without embeddings)
+
+    Returns:
+        Dict with keys:
+        - sqlite_sections (int): Total sections in SQLite
+        - sqlite_files (int): Total files in SQLite
+        - chroma_sections (int): Sections in ChromaDB
+        - gap (int): sqlite_sections minus chroma_sections
+
+    Raises:
+        sqlite3.OperationalError: If SQLite tables are missing
+    """
+    db_path, chroma_path = _get_paths()
     
     # SQLite Count
     import sqlite3
     conn = sqlite3.connect(str(db_path))
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM file_sections")
-    total_sections = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM files")
-    total_files = cur.fetchone()[0]
-    conn.close()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM file_sections")
+        total_sections = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM files")
+        total_files = cur.fetchone()[0]
+    finally:
+        conn.close()
     
     # ChromaDB Count
     try:
-        chroma = ChromaIntegration(chroma_path=str(chroma_path))
+        chroma = get_chroma(chroma_path=str(chroma_path))
         collection = chroma.sections_collection
         chroma_count = collection.count()
     except Exception as e:
@@ -74,8 +98,7 @@ def reembed_all(limit=None, batch_size=64):
         limit: Optional limit for testing
         batch_size: Batch size for embedding
     """
-    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
-    chroma_path = Path.home() / ".openclaw" / "kb" / ".knowledge" / "chroma_db"
+    db_path, chroma_path = _get_paths()
     
     logger.info("=" * 60)
     logger.info("Batch Re-Embedding - All Sections")

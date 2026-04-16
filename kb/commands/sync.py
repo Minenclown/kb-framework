@@ -20,29 +20,8 @@ from typing import List, Set, Dict, Any, Optional
 from kb.base.command import BaseCommand
 from kb.base.db import KBConnection, KBConnectionError
 from kb.commands import register_command
-
-
-def embed_texts(texts: list, model_name: str = "all-MiniLM-L6-v2") -> List[List[float]]:
-    """
-    Embed texts using sentence-transformers.
-    
-    Args:
-        texts: List of text strings to embed
-        model_name: Model to use
-        
-    Returns:
-        List of embedding vectors
-    """
-    from sentence_transformers import SentenceTransformer
-    
-    model = SentenceTransformer(model_name)
-    embeddings = model.encode(
-        texts,
-        normalize_embeddings=True,
-        batch_size=32,
-        show_progress_bar=False
-    )
-    return embeddings.tolist()
+from src.library.chroma_integration import get_chroma, embed_batch
+from src.library.batching import batched, BatchProgress, batched_chroma_upsert, batched_chroma_delete
 
 
 @register_command
@@ -144,16 +123,10 @@ class SyncCommand(BaseCommand):
         return result
     
     def _get_chroma_sections(self) -> Set[str]:
-        """Fetch all section IDs from ChromaDB."""
-        import chromadb
-        from chromadb.config import Settings
-        
+        """Fetch all section IDs from ChromaDB via singleton."""
         try:
-            client = chromadb.PersistentClient(
-                path=str(self.get_config().chroma_path),
-                settings=Settings(anonymized_telemetry=False)
-            )
-            collection = client.get_collection(name="kb_sections")
+            chroma = get_chroma()
+            collection = chroma.client.get_collection(name="kb_sections")
             results = collection.get(include=[])
             return set(results['ids'])
         except Exception as e:
@@ -334,7 +307,7 @@ class SyncCommand(BaseCommand):
                 texts.append(text)
             
             # Embed
-            embeddings = embed_texts(texts)
+            embeddings = embed_batch(texts)
             
             # Prepare ChromaDB records
             ids = [s['id'] for s in sections]
@@ -355,16 +328,18 @@ class SyncCommand(BaseCommand):
                 })
                 documents.append(texts[idx][:2000])
             
-            # Upsert to ChromaDB
-            import chromadb
-            from chromadb.config import Settings
-            
-            client = chromadb.PersistentClient(
-                path=str(self.get_config().chroma_path),
-                settings=Settings(anonymized_telemetry=False)
+            # Batched upsert to ChromaDB via singleton
+            chroma = get_chroma()
+            collection = chroma.client.get_or_create_collection(name="kb_sections")
+            batched_chroma_upsert(
+                collection=collection,
+                ids=ids,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                documents=documents,
+                batch_size=500,
+                desc="ChromaDB file upsert"
             )
-            collection = client.get_or_create_collection(name="kb_sections")
-            collection.upsert(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents)
             
             log.info(f"\n[OK] {len(sections)} sections embedded")
             
@@ -388,21 +363,15 @@ class SyncCommand(BaseCommand):
         return self.EXIT_SUCCESS  # Not an error, just informational
     
     def _embed_missing_sections(self, missing_ids: List[str], batch_size: int) -> int:
-        """Embed missing sections to ChromaDB."""
-        import chromadb
-        from chromadb.config import Settings
-        
+        """Embed missing sections to ChromaDB via singleton (batched with progress)."""
         if not missing_ids:
             return 0
         
         log = self.get_logger()
         log.info(f"Embedding {len(missing_ids)} missing sections...")
         
-        client = chromadb.PersistentClient(
-            path=str(self.get_config().chroma_path),
-            settings=Settings(anonymized_telemetry=False)
-        )
-        collection = client.get_or_create_collection(
+        chroma = get_chroma()
+        collection = chroma.client.get_or_create_collection(
             name="kb_sections",
             metadata={
                 "description": "Knowledge Base Sections Embeddings",
@@ -413,20 +382,25 @@ class SyncCommand(BaseCommand):
         
         processed = 0
         start_time = time.time()
+        progress = BatchProgress(
+            total=len(missing_ids),
+            desc="Embedding missing",
+            log_every=max(1, len(missing_ids) // 10)
+        )
         
-        for i in range(0, len(missing_ids), batch_size):
-            batch_ids = missing_ids[i:i + batch_size]
+        for batch_ids in batched(missing_ids, batch_size):
             
             placeholders = ','.join('?' * len(batch_ids))
             
             with self.get_db() as conn:
-                cursor = conn.execute(f"""
-                    SELECT id, file_id, file_path, section_header,
+                cursor = conn.execute(
+                    """SELECT id, file_id, file_path, section_header,
                            content_full, content_preview, section_level,
                            importance_score, keywords, file_hash
                     FROM file_sections
-                    WHERE id IN ({placeholders})
-                """, batch_ids)
+                    WHERE id IN (""" + placeholders + ")",
+                    batch_ids
+                )
                 
                 sections = []
                 for row in cursor.fetchall():
@@ -462,7 +436,7 @@ class SyncCommand(BaseCommand):
                 texts.append(text)
             
             # Generate embeddings
-            embeddings = embed_texts(texts)
+            embeddings = embed_batch(texts)
             
             # Prepare ChromaDB records
             ids = [s['id'] for s in sections]
@@ -483,27 +457,28 @@ class SyncCommand(BaseCommand):
                 })
                 documents.append(texts[idx][:2000])
             
-            # Upsert
-            collection.upsert(
-                ids=ids,
-                embeddings=embeddings,
-                metadatas=metadatas,
-                documents=documents
-            )
-            
-            processed += len(sections)
-            elapsed = time.time() - start_time
-            rate = processed / elapsed if elapsed > 0 else 0
-            
-            log.info(f"  Processed {processed}/{len(missing_ids)} sections ({rate:.1f}/s)")
+            # Batched upsert to ChromaDB
+            try:
+                upsert_result = batched_chroma_upsert(
+                    collection=collection,
+                    ids=ids,
+                    embeddings=embeddings,
+                    metadatas=metadatas,
+                    documents=documents,
+                    batch_size=500,
+                    desc="ChromaDB upsert"
+                )
+                processed += upsert_result.success
+                progress.advance(len(batch_ids), failed=upsert_result.failed)
+            except Exception as exc:
+                log.error(f"Upsert batch failed: {exc}")
+                progress.advance(len(batch_ids), failed=len(batch_ids))
         
+        progress.finish()
         return processed
     
     def _delete_orphans(self, orphan_ids: Set[str]) -> int:
-        """Delete orphaned entries from ChromaDB."""
-        import chromadb
-        from chromadb.config import Settings
-        
+        """Delete orphaned entries from ChromaDB via singleton (batched)."""
         if not orphan_ids:
             return 0
         
@@ -511,14 +486,19 @@ class SyncCommand(BaseCommand):
         log.info(f"Deleting {len(orphan_ids)} orphaned entries...")
         
         try:
-            client = chromadb.PersistentClient(
-                path=str(self.get_config().chroma_path),
-                settings=Settings(anonymized_telemetry=False)
+            chroma = get_chroma()
+            collection = chroma.client.get_collection(name="kb_sections")
+            # Batched delete for large orphan sets
+            result = batched_chroma_delete(
+                collection=collection,
+                ids=list(orphan_ids),
+                batch_size=1000,
+                desc="Deleting orphans"
             )
-            collection = client.get_collection(name="kb_sections")
-            collection.delete(ids=list(orphan_ids))
-            log.info(f"Successfully deleted {len(orphan_ids)} orphans")
-            return len(orphan_ids)
+            log.info(f"Successfully deleted {result.success} orphans")
+            if result.failed > 0:
+                log.warning(f"Failed to delete {result.failed} orphans")
+            return result.success
         except Exception as e:
             log.error(f"Failed to delete orphans: {e}")
             return 0

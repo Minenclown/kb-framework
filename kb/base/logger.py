@@ -122,6 +122,7 @@ class KBLogger:
         Get or create logger for specified name.
         
         Thread-safe with caching for performance.
+        All cache operations are under _cache_lock to prevent race conditions.
         
         Args:
             name: Logger name (e.g., "kb.sync")
@@ -136,35 +137,33 @@ class KBLogger:
                 if not cls._initialized:
                     cls.setup_logging()
         
-        # Check cache first
         with cls._cache_lock:
             if name in cls._logger_cache:
                 cached = cls._logger_cache[name]
                 if level is not None:
                     cached.setLevel(level)
                 return cached
-        
-        # Create new logger
-        logger = logging.getLogger(name)
-        
-        if level is not None:
-            logger.setLevel(level)
-        elif not logger.level:
-            logger.setLevel(cls._default_level)
-        
-        # Avoid duplicate handlers and duplicate propagation
-        if not logger.handlers:
-            handler = logging.StreamHandler(sys.stdout)
-            formatter = logging.Formatter(cls._format_str, datefmt=cls._date_format)
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-            logger.propagate = False
-        
-        # Cache the logger
-        with cls._cache_lock:
+            
+            # Create new logger under lock to prevent duplicate creation
+            logger = logging.getLogger(name)
+            
+            if level is not None:
+                logger.setLevel(level)
+            elif not logger.level:
+                logger.setLevel(cls._default_level)
+            
+            # Avoid duplicate handlers and duplicate propagation
+            if not logger.handlers:
+                handler = logging.StreamHandler(sys.stdout)
+                formatter = logging.Formatter(cls._format_str, datefmt=cls._date_format)
+                handler.setFormatter(formatter)
+                logger.addHandler(handler)
+                logger.propagate = False
+            
+            # Cache the logger
             cls._logger_cache[name] = logger
-        
-        return logger
+            
+            return logger
     
     @classmethod
     def set_level(cls, level: int) -> None:

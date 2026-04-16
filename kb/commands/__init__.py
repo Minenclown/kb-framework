@@ -103,6 +103,9 @@ def reload_commands() -> None:
         'kb.commands.ghost',
         'kb.commands.search',
         'kb.commands.warmup',
+        'kb.commands.llm',
+        'kb.commands.engine',
+        'kb.commands.backup',
     ]
     
     for module_name in command_modules:
@@ -129,6 +132,9 @@ def _ensure_commands_loaded():
             from kb.commands.ghost import GhostCommand
             from kb.commands.warmup import WarmupCommand
             from kb.commands.search import SearchCommand
+            from kb.commands.llm import LLMCommand
+            from kb.commands.engine import EngineListCommand, EngineInfoCommand
+            from kb.commands.backup import BackupCommand
         except ImportError:
             pass  # Commands not yet implemented
 
@@ -140,6 +146,10 @@ __all__ = [
     'GhostCommand',
     'WarmupCommand',
     'SearchCommand',
+    'LLMCommand',
+    'EngineListCommand',
+    'EngineInfoCommand',
+    'BackupCommand',
     'register_command',
     'get_commands',
     'get_command',

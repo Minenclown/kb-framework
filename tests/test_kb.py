@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'kb'))
 
 from indexer import BiblioIndexer
-from library.knowledge_base.chroma_integration import ChromaIntegration
+from kb.knowledge_base.chroma_integration import ChromaIntegration
 from config import CHROMA_PATH, DB_PATH
 
 

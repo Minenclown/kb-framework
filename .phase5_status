@@ -1,0 +1,76 @@
+# Phase 5 Status: File-Watcher und Scheduler
+
+**Started:** 2026-04-15 21:20 UTC
+**Completed:** 2026-04-15 21:25 UTC
+**Status:** ✅ DONE
+
+## Created Files
+
+### File-Watcher (`kb/llm/watcher/`)
+- `kb/llm/watcher/__init__.py` — Package exports (FileWatcher, FileWatcherError, WatchedFile, FileWatcherState)
+- `kb/llm/watcher/file_watcher.py` — Full file watcher implementation (716 lines)
+
+### Scheduler (`kb/llm/scheduler/`)
+- `kb/llm/scheduler/__init__.py` — Package exports (TaskScheduler, TaskSchedulerError, ScheduledJob, JobResult, JobStatus)
+- `kb/llm/scheduler/task_scheduler.py` — Full task scheduler implementation (1159 lines)
+
+## Modified Files
+
+- `kb/llm/__init__.py` — Added watcher and scheduler exports to __all__
+- `kb/llm/config.py` — Added config keys:
+  - `watcher_state_db` property
+  - `scheduler_state_db` property
+  - `watcher_interval` property (default: 20min, env: KB_LLM_WATCHER_INTERVAL)
+  - `watcher_extensions` property (default: .md/.pdf, env: KB_LLM_WATCHER_EXTENSIONS)
+  - `watcher_exclude_dirs` property (default: llm, env: KB_LLM_WATCHER_EXCLUDE_DIRS)
+  - `gc_threshold_days` property (default: 90, env: KB_LLM_GC_THRESHOLD_DAYS)
+  - Updated `to_dict()` with new keys
+
+## Features Implemented
+
+### FileWatcher
+- ✅ Scans `kb/library/` recursively for new files
+- ✅ Filter: Only .md and .pdf files (configurable)
+- ✅ Exclude: `kb/library/llm/` (not recursive into LLM output)
+- ✅ Tracking-DB: SQLite with watched_files + scan_log tables
+- ✅ SHA256 content hashing for change detection
+- ✅ Mark files as: pending → processing → processed/skipped/error
+- ✅ Trigger: New file → EssenzGenerator.generate_essence()
+- ✅ Continuous mode: run() with configurable interval
+- ✅ Stats and pending file queries
+- ✅ Re-processing support (reset_file)
+
+### TaskScheduler
+- ✅ Cron-like syntax parser (5-field: min hour day month weekday)
+- ✅ Persistent state in SQLite (job_log + job_state tables)
+- ✅ 4 built-in jobs:
+  1. **file-watcher** — `*/20 * * * *` (every 20 min)
+  2. **kb-validator** — `0 */12 * * *` (every 12h)
+  3. **graph-rebuild** — `0 4 * * 6` (Sundays at 04:00)
+  4. **essenz-gc** — `0 3 * * *` (daily at 03:00)
+- ✅ Manual trigger via `run_job(job_id)`
+- ✅ Async/await for all job handlers
+- ✅ Graceful shutdown on SIGTERM/SIGINT
+- ✅ Retry with exponential backoff
+- ✅ Job timeout enforcement
+- ✅ Logging all job executions to SQLite
+- ✅ Enable/disable jobs
+- ✅ Job history and stats queries
+- ✅ Dedup: won't re-run a job that ran within 2 minutes
+
+### Job Handler Implementations
+- **file-watcher**: Delegates to FileWatcher.scan()
+- **kb-validator**: Checks essence JSON validity, missing fields, report frontmatter, graph structure
+- **graph-rebuild**: Rebuilds knowledge_graph.json from all essence entities/relationships
+- **essenz-gc**: Archives essences older than 90 days, cleans stale incoming queue
+
+## Tests Verified
+- ✅ Python syntax (ast.parse) for all new files
+- ✅ SQLite schema creation for watcher_state.db
+- ✅ SQLite schema creation for scheduler_state.db
+- ✅ Cron expression parsing for all 4 built-in jobs
+- ✅ should_run() matching logic (file-watcher at :20, not :15)
+- ✅ Sunday graph-rebuild schedule validation
+
+## Note
+Pre-existing issue: `import kb.llm` hangs due to OllamaEngine dependencies (not caused by Phase 5 changes). All Phase 5 modules import correctly when loaded independently.

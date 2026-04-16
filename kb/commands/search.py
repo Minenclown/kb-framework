@@ -19,7 +19,7 @@ from typing import Optional
 
 from kb.base.command import BaseCommand
 from kb.commands import register_command
-from kb.library.knowledge_base.hybrid_search import HybridSearch, SearchResult
+from kb.knowledge_base.hybrid_search import HybridSearch, SearchResult
 
 
 @register_command

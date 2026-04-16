@@ -65,9 +65,11 @@ def init_output_dir():
 def get_indexed_files() -> set:
     """Get all files indexed in KB"""
     conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.execute("SELECT DISTINCT file_path FROM files WHERE file_path IS NOT NULL")
-    indexed = {row[0] for row in cursor.fetchall()}
-    conn.close()
+    try:
+        cursor = conn.execute("SELECT DISTINCT file_path FROM files WHERE file_path IS NOT NULL")
+        indexed = {row[0] for row in cursor.fetchall()}
+    finally:
+        conn.close()
     return indexed
 
 def load_cache() -> dict:
@@ -77,8 +79,8 @@ def load_cache() -> dict:
         try:
             with open(CACHE_FILE) as f:
                 return json.load(f)
-        except:
-            pass
+        except Exception as e:
+            log(f"WARN: Failed to load cache: {e}")
     return {}
 
 def save_cache(cache: dict):
@@ -99,9 +101,8 @@ def should_scan_file(file_path: Path, cache: dict, incremental: bool) -> bool:
         current_mtime = file_path.stat().st_mtime
         if key not in cache or cache[key] != current_mtime:
             return True
-    except:
-        pass
-    return False
+    except OSError:
+        return False
 
 def scan_for_files(incremental: bool = True) -> list[Path]:
     """
@@ -130,7 +131,7 @@ def scan_for_files(incremental: bool = True) -> list[Path]:
                 # Update cache
                 try:
                     new_cache[str(f)] = f.stat().st_mtime
-                except:
+                except OSError:
                     pass
     
     # Save updated cache

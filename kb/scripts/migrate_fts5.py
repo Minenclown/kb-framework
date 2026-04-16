@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import DB_PATH
-from kb.library.knowledge_base.fts5_setup import (
+from kb.knowledge_base.fts5_setup import (
     check_fts5_available,
     setup_fts5,
     rebuild_fts5_index,

@@ -11,6 +11,8 @@ Commands:
     audit     Run full KB audit
     ghost     Find orphaned entries
     warmup    Preload ChromaDB model
+    llm       LLM-Integration (Essenzen, Reports, Watcher, Scheduler)
+    backup    Backup KB data (library-only or full)
 
 Architecture:
     kb/
@@ -23,7 +25,8 @@ Architecture:
     │   ├── sync.py     # SyncCommand
     │   ├── audit.py    # AuditCommand
     │   ├── ghost.py    # GhostCommand
-    │   └── warmup.py   # WarmupCommand
+    │   ├── warmup.py   # WarmupCommand
+    │   └── llm.py      # LLMCommand
     └── __main__.py     # CLI entrypoint
 """
 
@@ -67,6 +70,13 @@ Examples:
   kb audit -v              Run audit with verbose output
   kb ghost --scan-dirs ~/docs,~/notes
   kb warmup                Preload embedding model
+  kb llm status            LLM-Status anzeigen
+  kb llm generate essence "ML Basics"
+  kb llm generate report daily
+  kb llm watch status
+  kb llm scheduler list
+  kb llm list essences
+  kb llm config
 
 Environment Variables:
   KB_BASE_PATH       Base directory for KB (default: ~/.openclaw/kb)

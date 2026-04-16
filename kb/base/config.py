@@ -90,18 +90,27 @@ class KBConfig:
         """
         Returns singleton instance (lazy initialization).
         
-        Thread-safe: Uses double-checked locking pattern.
+        Thread-safe: All reads/writes of _instance are protected by cls._lock.
+        No fast path outside the lock to avoid race conditions.
         """
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = cls(base_path)
-        elif base_path is not None:
-            # If a different base_path is requested, reload
-            existing = cls._instance._base_path.resolve()
-            requested = Path(base_path).resolve()
-            if existing != requested:
+        with cls._lock:
+            if cls._instance is None:
                 cls._instance = cls(base_path)
+            elif base_path is not None:
+                # If a different base_path is requested, reload under lock
+                existing = cls._instance._base_path.resolve()
+                requested = Path(base_path).resolve()
+                if existing != requested:
+                    old_instance = cls._instance
+                    cls._instance = None
+                    cls._initialized = False
+                    try:
+                        cls._instance = cls(base_path)
+                    except KBConfigError:
+                        # Restore on failure — don't leave singleton in broken state
+                        cls._instance = old_instance
+                        cls._initialized = True
+                        raise
         
         return cls._instance
     
@@ -147,6 +156,16 @@ class KBConfig:
         if env:
             return Path(env).resolve()
         return Path.home() / "knowledge" / "library"
+    
+    @property
+    def library_biblio_path(self) -> Path:
+        """Path to library/biblio/ (LLM-generated content)."""
+        return self.library_path / "biblio"
+    
+    @property
+    def knowledge_base_path(self) -> Path:
+        """Path to kb/knowledge_base/ (search engine code path)."""
+        return self._base_path / "knowledge_base"
     
     @property
     def workspace_path(self) -> Path:
@@ -198,6 +217,8 @@ class KBConfig:
             'db_path': str(self.db_path),
             'chroma_path': str(self.chroma_path),
             'library_path': str(self.library_path),
+            'library_biblio_path': str(self.library_biblio_path),
+            'knowledge_base_path': str(self.knowledge_base_path),
             'workspace_path': str(self.workspace_path),
             'ghost_cache_path': str(self.ghost_cache_path),
             'backup_dir': str(self.backup_dir),

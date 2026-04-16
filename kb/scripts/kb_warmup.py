@@ -10,11 +10,11 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path.home() / ".openclaw" / "kb"))
 
-from kb.library.knowledge_base.chroma_integration import ChromaIntegration
+from kb.knowledge_base.chroma_integration import get_chroma
 
 def warmup():
     print("Warming up ChromaDB model...")
-    chroma = ChromaIntegration()
+    chroma = get_chroma()
     
     # Preload model
     _ = chroma.model
