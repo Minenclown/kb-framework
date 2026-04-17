@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED: Dieses Script ist veraltet!
+# Bitte nutze ./install.sh im Repo-Root stattdessen.
+# Siehe: https://github.com/Minenclown/kb-framework/issues/KB-FRAMEWORK-001
+
 # KB Framework - Quick Install
 
 set -e
