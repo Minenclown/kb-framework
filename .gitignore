@@ -4,6 +4,17 @@
 
 # Production data (library/ content)
 library/biblio.db
+library/projektplanung/
+library/audit/
+library/llm/
+library/biblio/reports/
+library/biblio/incoming/
+library/biblio/graph/
+library/biblio/essences/
+library/llm/reports/
+library/llm/incoming/
+library/llm/graph/
+library/llm/essences/
 
 # ChromaDB Vektoren
 chroma_db/
@@ -18,6 +29,15 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+venv/
+*.egg-info/
+
+# Install artifacts
+--help
+
+# Backup
+cache/
+library_backup*/
 
 # IDE
 .vscode/

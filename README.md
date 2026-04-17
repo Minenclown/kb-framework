@@ -60,17 +60,20 @@ Every search returns **pointers**, not paragraphs. The agent can cite, verify, a
 ## Quick Start
 
 ```bash
-# Installation
-pip install -r requirements.txt
-./install.sh
+# Installation (see INSTALL.md for full details)
+python3 -m venv venv                       # Create virtual environment
+./venv/bin/pip install -r requirements.txt  # Install dependencies
+./install.sh                               # Optional: install OCR deps
 
-# Use CLI
-kb index /path/to/docs          # Index documents
-kb search "your query"          # Search knowledge base
-kb sync                         # Sync ChromaDB with SQLite
-kb audit                        # Run full audit
-kb ghost                        # Find orphaned entries
-kb warmup                       # Preload embedding model
+# Use CLI (venv-aware wrapper)
+./kb.sh index /path/to/docs          # Index documents
+./kb.sh search "your query"          # Search knowledge base
+./kb.sh sync                         # Sync ChromaDB with SQLite
+./kb.sh audit                        # Run full audit
+./kb.sh ghost                        # Find orphaned entries
+./kb.sh warmup                       # Preload embedding model
+
+# Or add an alias: alias kb='bash ./kb.sh'
 ```
 
 ## CLI Commands
