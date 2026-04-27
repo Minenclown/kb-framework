@@ -1,3 +1,11 @@
+# Audit & Review Reports (werden generiert)
+AUDIT_*.md
+REVIEW_PHASE*.md
+EXCEPTION_ANALYSIS.md
+MASTER_FIX_PLAN.md
+MICRO_FIX_PLAN.md
+REFACTOR_*.md
+
 # Database (keine Daten!)
 *.db
 *.db.backup
@@ -15,6 +23,19 @@ library/llm/reports/
 library/llm/incoming/
 library/llm/graph/
 library/llm/essences/
+
+# Library Reports (generiert)
+library/biblio/reports/
+library/biblio/incoming/
+library/biblio/graph/
+library/biblio/essences/
+library/llm/reports/
+library/llm/incoming/
+library/llm/graph/
+library/llm/essences/
+
+# Workflow Referenzen (lokale Notizen)
+library/Workflow_Referenzen/
 
 # ChromaDB Vektoren
 chroma_db/
