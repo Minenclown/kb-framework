@@ -185,118 +185,92 @@ class LLMCommand(BaseCommand):
             description="Subcommands für das LLM-Subsystem",
         )
 
-        # 1. status
+        self._add_status_parser(sub)
+        self._add_generate_parsers(gen=sub)
+        self._add_watch_parser(sub)
+        self._add_scheduler_parser(sub)
+        self._add_list_parsers(lst=sub)
+        self._add_config_parser(cfg=sub)
+        self._add_engine_parsers(eng=sub)
+
+    # ─── Argument parsers ──────────────────────────────────────────
+
+    def _add_status_parser(self, sub):
         sub.add_parser("status", help="LLM-Status: Modell, Jobs, letzte Essenzen")
 
-        # 2. generate
-        gen = sub.add_parser("generate", help="Essenz oder Report generieren")
+    def _add_generate_parsers(self, gen):
         gen_sub = gen.add_subparsers(dest="generate_what", help="Was generieren?")
+        self._add_essence_parser(gen_sub)
+        self._add_report_parser(gen_sub)
 
-        # generate essence <topic>
+    def _add_essence_parser(self, gen_sub):
         ess = gen_sub.add_parser("essence", help="Essenz für ein Thema generieren")
         ess.add_argument("topic", help="Thema der Essenz")
-        ess.add_argument(
-            "--source-files",
-            nargs="+",
-            dest="source_files",
-            help="Spezifische Quell-Dateipfade",
-        )
-        ess.add_argument(
-            "--batch",
-            nargs="+",
-            dest="batch_topics",
-            help="Mehrere Themen für Batch-Erstellung",
-        )
+        ess.add_argument("--source-files", nargs="+", dest="source_files",
+                         help="Spezifische Quell-Dateipfade")
+        ess.add_argument("--batch", nargs="+", dest="batch_topics",
+                         help="Mehrere Themen für Batch-Erstellung")
 
-        # generate report <daily|weekly|monthly>
+    def _add_report_parser(self, gen_sub):
         rep = gen_sub.add_parser("report", help="Report generieren")
-        rep.add_argument(
-            "period",
-            choices=["daily", "weekly", "monthly"],
-            help="Berichtszeitraum",
-        )
+        rep.add_argument("period", choices=["daily", "weekly", "monthly"],
+                         help="Berichtszeitraum")
 
-        # 3. watch start|stop|status
+    def _add_watch_parser(self, sub):
         watch = sub.add_parser("watch", help="FileWatcher steuern")
-        watch.add_argument(
-            "watch_action",
-            choices=["start", "stop", "status"],
-            help="Aktion für den FileWatcher",
-        )
+        watch.add_argument("watch_action", choices=["start", "stop", "status"],
+                          help="Aktion für den FileWatcher")
 
-        # 4. scheduler start|stop|list|trigger <job>
+    def _add_scheduler_parser(self, sub):
         sched = sub.add_parser("scheduler", help="TaskScheduler steuern")
-        sched.add_argument(
-            "scheduler_action",
-            choices=["start", "stop", "list", "trigger"],
-            help="Aktion für den TaskScheduler",
-        )
+        sched.add_argument("scheduler_action", choices=["start", "stop", "list", "trigger"],
+                          help="Aktion für den TaskScheduler")
         sched.add_argument("job", nargs="?", default=None, help="Job-ID für trigger")
 
-        # 5. list essences|reports
-        lst = sub.add_parser("list", help="Essenzen oder Reports auflisten")
+    def _add_list_parsers(self, lst):
         lst_sub = lst.add_subparsers(dest="list_what", help="Was auflisten?")
+        self._add_essences_list_parser(lst_sub)
+        self._add_reports_list_parser(lst_sub)
 
-        # list essences
+    def _add_essences_list_parser(self, lst_sub):
         le = lst_sub.add_parser("essences", help="Alle Essenzen auflisten")
         le.add_argument("--topic-filter", help="Nach Thema filtern (Substring)")
         le.add_argument("--date-range", help="Datumsbereich (z.B. 2026-04-01..2026-04-15)")
         le.add_argument("--limit", type=int, default=50, help="Max Ergebnisse (Standard: 50)")
         le.add_argument("--json", action="store_true", dest="json_output", help="JSON-Ausgabe")
 
-        # list reports
+    def _add_reports_list_parser(self, lst_sub):
         lr = lst_sub.add_parser("reports", help="Alle Reports auflisten")
         lr.add_argument("--type", dest="report_type_filter",
-                        choices=["daily", "weekly", "monthly"],
-                        help="Nach Report-Typ filtern")
+                       choices=["daily", "weekly", "monthly"],
+                       help="Nach Report-Typ filtern")
         lr.add_argument("--limit", type=int, default=50, help="Max Ergebnisse (Standard: 50)")
         lr.add_argument("--json", action="store_true", dest="json_output", help="JSON-Ausgabe")
 
-        # 6. config [show|set <key> <value>]
-        cfg = sub.add_parser("config", help="LLM-Konfiguration anzeigen/setzen")
-        cfg.add_argument(
-            "config_action",
-            nargs="?",
-            default="show",
-            choices=["show", "set"],
-            help="Aktion (Standard: show)",
-        )
+    def _add_config_parser(self, cfg):
+        cfg.add_argument("config_action", nargs="?", default="show",
+                        choices=["show", "set"], help="Aktion (Standard: show)")
         cfg.add_argument("config_key", nargs="?", default=None, help="Config-Key (für set)")
         cfg.add_argument("config_value", nargs="?", default=None, help="Config-Value (für set)")
 
-        # 7. engine <status|switch|test>
-        eng = sub.add_parser("engine", help="LLM-Engine steuern (Status, Switch, Test)")
-        eng_sub = eng.add_subparsers(
-            dest="engine_action",
-            title="Engine-Aktionen",
-            description="Verfügbare Engine-Aktionen",
-        )
-
-        # engine status
+    def _add_engine_parsers(self, eng):
+        eng_sub = eng.add_subparsers(dest="engine_action", title="Engine-Aktionen",
+                                     description="Verfügbare Engine-Aktionen")
         eng_sub.add_parser("status", help="Status beider Engines und aktive model_source")
+        self._add_engine_switch_parser(eng_sub)
+        self._add_engine_test_parser(eng_sub)
 
-        # engine switch <source>
+    def _add_engine_switch_parser(self, eng_sub):
         eng_sw = eng_sub.add_parser("switch", help="Model-Source wechseln")
-        eng_sw.add_argument(
-            "source",
-            choices=["ollama", "huggingface", "auto", "compare"],
-            help="Neue model_source",
-        )
+        eng_sw.add_argument("source", choices=["ollama", "huggingface", "auto", "compare"],
+                           help="Neue model_source")
 
-        # engine test
+    def _add_engine_test_parser(self, eng_sub):
         eng_test = eng_sub.add_parser("test", help="Kurzer Test beider Engines")
-        eng_test.add_argument(
-            "--prompt",
-            default="Sag Hallo in einem Satz.",
-            help="Test-Prompt (Standard: Kurz-Begrüßung)",
-        )
-        eng_test.add_argument(
-            "--max-tokens",
-            type=int,
-            default=50,
-            dest="max_tokens",
-            help="Max Tokens für Test (Standard: 50)",
-        )
+        eng_test.add_argument("--prompt", default="Sag Hallo in einem Satz.",
+                             help="Test-Prompt (Standard: Kurz-Begrüßung)")
+        eng_test.add_argument("--max-tokens", type=int, default=50, dest="max_tokens",
+                             help="Max Tokens für Test (Standard: 50)")
 
     # ─── Execution dispatch ────────────────────────────────────────
 
@@ -352,57 +326,76 @@ class LLMCommand(BaseCommand):
     def _cmd_status(self) -> int:
         """Zeigt: Model-Source, beide Engines, aktive Jobs, letzte Essenzen/Reports."""
         from kb.biblio.config import LLMConfig
-        from kb.biblio.engine.registry import EngineRegistry
 
-        log = self.get_logger()
         config = LLMConfig.get_instance()
+        log = self.get_logger()
 
         print("\n🧠  LLM System Status")
         print("=" * 50)
 
-        # Model-Source
+        self._print_config_status(config)
+        self._print_engine_status(config, log)
+        self._print_scheduler_status()
+        essences, reports = self._get_content_recent()
+        self._print_essences_recent(essences)
+        self._print_reports_recent(reports)
+        self._print_watcher_status()
+        self._print_paths(config)
+        print()
+        return self.EXIT_SUCCESS
+
+    def _print_config_status(self, config):
+        """Print model source and parallel mode config."""
         print(f"\n  🔀  Model Source:  {config.model_source}")
         print(f"     Parallel Mode:  {config.parallel_mode}")
         if config.parallel_mode:
             print(f"     Strategy:       {config.parallel_strategy}")
 
-        # Engine-Status über Registry
+    def _print_engine_status(self, config, log):
+        """Print primary and secondary engine status."""
+        from kb.biblio.engine.registry import EngineRegistry
         try:
             registry = EngineRegistry.get_instance()
             status = registry.status()
-            print("\n  🔧  Primary Engine:")
-            primary = status.get("primary")
-            if primary:
-                avail = "✅" if primary.get("available") else "❌"
-                print(f"     Provider:   {primary.get('provider', '?')}")
-                print(f"     Model:      {primary.get('model', '?')}")
-                print(f"     Available:  {avail}  {primary.get('available', False)}")
-            else:
-                print("     — nicht verfügbar")
-
-            secondary = status.get("secondary")
-            if secondary:
-                print("\n  🔧  Secondary Engine:")
-                avail = "✅" if secondary.get("available") else "❌"
-                print(f"     Provider:   {secondary.get('provider', '?')}")
-                print(f"     Model:      {secondary.get('model', '?')}")
-                print(f"     Available:  {avail}  {secondary.get('available', False)}")
+            self._print_primary_engine(status.get("primary"))
+            self._print_secondary_engine(status.get("secondary"))
         except (ImportError, RuntimeError, OSError) as e:
             log.debug(f"EngineRegistry status failed: {e}")
-            # Fallback: Einzelne Engines prüfen
-            ollama_ok = False
-            try:
-                from kb.biblio.engine.ollama_engine import OllamaEngine
-                ollama_ok = OllamaEngine.get_instance(config).is_available()
-            except (ImportError, OSError) as ex:
-                log.debug(f"Ollama check failed: {ex}")
-                pass
-            icon = "✅" if ollama_ok else "❌"
-            print(f"\n  {icon}  Modell:    {config.model}")
-            print(f"     URL:       {config.ollama_url}")
-            print(f"     Available: {ollama_ok}")
+            self._print_engine_fallback(config)
 
-        # Scheduler-Status
+    def _print_primary_engine(self, primary):
+        print("\n  🔧  Primary Engine:")
+        if primary:
+            avail = "✅" if primary.get("available") else "❌"
+            print(f"     Provider:   {primary.get('provider', '?')}")
+            print(f"     Model:      {primary.get('model', '?')}")
+            print(f"     Available:  {avail}  {primary.get('available', False)}")
+        else:
+            print("     — nicht verfügbar")
+
+    def _print_secondary_engine(self, secondary):
+        if secondary:
+            print("\n  🔧  Secondary Engine:")
+            avail = "✅" if secondary.get("available") else "❌"
+            print(f"     Provider:   {secondary.get('provider', '?')}")
+            print(f"     Model:      {secondary.get('model', '?')}")
+            print(f"     Available:  {avail}  {secondary.get('available', False)}")
+
+    def _print_engine_fallback(self, config):
+        """Fallback when EngineRegistry is unavailable."""
+        from kb.biblio.engine.ollama_engine import OllamaEngine
+        ollama_ok = False
+        try:
+            ollama_ok = OllamaEngine.get_instance(config).is_available()
+        except (ImportError, OSError):
+            pass
+        icon = "✅" if ollama_ok else "❌"
+        print(f"\n  {icon}  Modell:    {config.model}")
+        print(f"     URL:       {config.ollama_url}")
+        print(f"     Available: {ollama_ok}")
+
+    def _print_scheduler_status(self):
+        """Print scheduler status."""
         try:
             from kb.biblio.scheduler import TaskScheduler
             scheduler = TaskScheduler()
@@ -416,16 +409,19 @@ class LLMCommand(BaseCommand):
         except (ImportError, RuntimeError, OSError):
             print(f"\n  ⚠️  Scheduler: nicht verfügbar")
 
-        # Letzte Essenzen
+    def _get_content_recent(self):
+        """Get recent essences and reports."""
         try:
             from kb.biblio.content_manager import LLMContentManager
             manager = LLMContentManager()
             essences = _run_async(manager.list_essences(limit=3))
             reports = _run_async(manager.list_reports(limit=3))
-        except (ValueError, TypeError, ImportError) as e:
-            log.debug(f"Content manager query failed: {e}")
+        except (ValueError, TypeError, ImportError):
             essences, reports = [], []
+        return essences, reports
 
+    def _print_essences_recent(self, essences):
+        """Print recent essences."""
         print(f"\n  📦  Letzte Essenzen ({len(essences)}):")
         if essences:
             for e in essences:
@@ -433,6 +429,8 @@ class LLMCommand(BaseCommand):
         else:
             print("     — keine vorhanden")
 
+    def _print_reports_recent(self, reports):
+        """Print recent reports."""
         print(f"\n  📊  Letzte Reports ({len(reports)}):")
         if reports:
             for r in reports:
@@ -440,7 +438,8 @@ class LLMCommand(BaseCommand):
         else:
             print("     — keine vorhanden")
 
-        # FileWatcher-Status
+    def _print_watcher_status(self):
+        """Print FileWatcher status."""
         try:
             from kb.biblio.watcher import FileWatcher
             watcher = FileWatcher()
@@ -453,12 +452,11 @@ class LLMCommand(BaseCommand):
         except Exception:
             print(f"\n  ⚠️  FileWatcher: nicht verfügbar")
 
-        # Pfade
+    def _print_paths(self, config):
+        """Print configured paths."""
         print(f"\n  📁  Essences: {config.essences_path}")
         print(f"  📁  Reports:   {config.reports_path}")
         print(f"  📁  Graph:     {config.graph_path}")
-        print()
-        return self.EXIT_SUCCESS
 
     # ==================================================================
     # 7. kb llm engine <status|switch|test>

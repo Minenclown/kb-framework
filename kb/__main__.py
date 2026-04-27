@@ -46,9 +46,10 @@ if str(PARENT_DIR) not in sys.path:
 # Setup paths for KB installation — delegate to paths.py
 try:
     from kb.framework.paths import get_default_base_path
-    KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(get_default_base_path()))
+    _default_path = str(get_default_base_path())
 except Exception:
-    KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
+    _default_path = str(Path.home() / ".openclaw" / "kb")
+KB_BASE_PATH = os.getenv("KB_BASE_PATH", _default_path)
 os.environ.setdefault("KB_BASE_PATH", KB_BASE_PATH)
 
 

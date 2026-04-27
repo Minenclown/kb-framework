@@ -14,7 +14,7 @@ chromadb>=0.4.0,<2.0.0
 # ── Embeddings ───────────────────────────────────────────────────
 # Sentence-transformers for embedding generation and cross-encoder reranking
 # Used by: src/library/chroma_integration.py, kb/commands/warmup.py, src/library/reranker.py
-sentence-transformers>=2.0.0
+sentence-transformers>=2.0.0,<3.0
 
 # ── YAML Parsing ─────────────────────────────────────────────────
 # PyYAML for Obsidian frontmatter parsing and config files

@@ -20,7 +20,11 @@ _env = os.getenv("KB_DB_PATH")
 if _env:
     DB_PATH = _env
 else:
-    _base = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
+    try:
+        from kb.framework.paths import get_default_base_path
+        _base = os.getenv("KB_BASE_PATH", str(get_default_base_path()))
+    except ImportError:
+        _base = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
     DB_PATH = str(Path(_base) / "library" / "biblio.db")
 
 # Bibliothek

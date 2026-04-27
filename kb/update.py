@@ -30,7 +30,8 @@ try:
     from kb.framework.paths import get_default_backup_dir
     BACKUP_DIR = get_default_backup_dir()
 except ImportError:
-    BACKUP_DIR = Path.home() / ".openclaw" / "kb" / "backup"
+    from kb.framework.paths import get_default_base_path
+    BACKUP_DIR = get_default_base_path() / "backup"
 
 # Allowed pattern for GitHub repo names (owner/repo format)
 import re
@@ -97,7 +98,8 @@ def backup_current_installation(kb_path):
         from kb.framework.paths import get_default_db_path
         db_path = get_default_db_path()
     except ImportError:
-        db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
+        from kb.framework.paths import get_default_base_path
+        db_path = get_default_base_path() / "library" / "biblio.db"
     if db_path.exists():
         shutil.copy2(db_path, backup_path / "biblio.db.bak")
     
@@ -160,7 +162,11 @@ def download_and_install(release_info, kb_path, scripts_path):
     if kb_path.exists():
         # Validate before deletion
         kb_path = Path(kb_path).resolve()
-        expected_base = Path.home() / ".openclaw" / "kb"
+        try:
+            from kb.framework.paths import get_default_base_path
+            expected_base = get_default_base_path()
+        except ImportError:
+            expected_base = Path.home() / ".openclaw" / "kb"
         if not str(kb_path).startswith(str(expected_base)):
             raise ValueError(f"Refusing to delete {kb_path}: outside expected directory")
         shutil.rmtree(kb_path)
@@ -174,7 +180,11 @@ def download_and_install(release_info, kb_path, scripts_path):
     if new_scripts.exists() and scripts_path.exists():
         # Validate before deletion
         scripts_path = Path(scripts_path).resolve()
-        expected_base = Path.home() / ".openclaw" / "kb"
+        try:
+            from kb.framework.paths import get_default_base_path
+            expected_base = get_default_base_path()
+        except ImportError:
+            expected_base = Path.home() / ".openclaw" / "kb"
         if not str(scripts_path).startswith(str(expected_base)):
             raise ValueError(f"Refusing to delete {scripts_path}: outside expected directory")
         shutil.rmtree(scripts_path)
@@ -188,7 +198,11 @@ def download_and_install(release_info, kb_path, scripts_path):
     
     # Cleanup
     temp_dir = Path(temp_dir).resolve()
-    expected_base = Path.home() / ".openclaw" / "kb"
+    try:
+        from kb.framework.paths import get_default_base_path
+        expected_base = get_default_base_path()
+    except ImportError:
+        expected_base = Path.home() / ".openclaw" / "kb"
     if not str(temp_dir).startswith(str(expected_base)):
         raise ValueError(f"Refusing to delete {temp_dir}: outside expected directory")
     shutil.rmtree(temp_dir)
@@ -243,7 +257,8 @@ def update_database_schema(kb_path):
         from kb.framework.paths import get_default_db_path
         db_path = get_default_db_path()
     except ImportError:
-        db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
+        from kb.framework.paths import get_default_base_path
+        db_path = get_default_base_path() / "library" / "biblio.db"
     if not db_path.exists():
         return
     

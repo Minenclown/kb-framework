@@ -594,8 +594,12 @@ class BiblioIndexer:
             cursor = self.conn.execute(
                 "SELECT file_path, file_hash FROM files"
             )
-            for row in cursor.fetchall():
-                indexed_files[row['file_path']] = row['file_hash']
+            while True:
+                rows = cursor.fetchmany(1000)  # Batch von 1000
+                if not rows:
+                    break
+                for row in rows:
+                    indexed_files[row['file_path']] = row['file_hash']
 
             # Check for updates (changed or new files)
             for file_path, abs_path in md_files.items():

@@ -124,6 +124,7 @@ class TestBiblioIndexerInit:
             
             with BiblioIndexer(str(db_path)) as indexer:
                 assert indexer.conn is not None
+                indexer.conn.execute("SELECT 1")  # Innerhalb des with-Blocks
             
             # Connection should be closed after context
             try:
