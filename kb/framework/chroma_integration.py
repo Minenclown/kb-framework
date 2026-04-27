@@ -42,6 +42,16 @@ from .exceptions import DatabaseError
 logger = logging.getLogger(__name__)
 
 
+def _validate_chroma_path(path: Path) -> Path:
+    """Validate chroma path is within allowed KB directory."""
+    base = Path.home() / ".openclaw" / "kb"
+    try:
+        path.resolve().relative_to(base.resolve())
+    except ValueError:
+        raise ValueError(f"Chroma path {path} is outside allowed directory {base}")
+    return path
+
+
 class ChromaIntegration:
     """
     ChromaDB wrapper for knowledge base integration — singleton per process.
@@ -114,7 +124,7 @@ class ChromaIntegration:
         if chroma_path is None:
             self.chroma_path = get_default_chroma_path()
         else:
-            self.chroma_path = Path(chroma_path).expanduser()
+            self.chroma_path = _validate_chroma_path(Path(chroma_path).expanduser())
         self.chroma_path.mkdir(parents=True, exist_ok=True)
         self.model_name = model_name
         self._model = None
@@ -559,7 +569,7 @@ class ChromaIntegrationV2(ChromaIntegration):
         if chroma_path is None:
             self.chroma_path = get_default_chroma_path()
         else:
-            self.chroma_path = Path(chroma_path).expanduser()
+            self.chroma_path = _validate_chroma_path(Path(chroma_path).expanduser())
         self.chroma_path.mkdir(parents=True, exist_ok=True)
         self.model_name = model_name
         self._model = None

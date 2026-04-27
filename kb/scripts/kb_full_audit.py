@@ -18,7 +18,8 @@ try:
     from kb.framework.paths import get_default_db_path
     DB_PATH = str(get_default_db_path())
 except ImportError:
-    from config import DB_PATH
+    from kb.base.config import KBConfig
+    DB_PATH = str(KBConfig.get_instance().db_path)
 
 # Konfiguration - use KBConfig for portable paths
 try:

@@ -20,6 +20,7 @@ from typing import Dict, List, Tuple, Any
 from kb.base.command import BaseCommand, CommandError
 from kb.base.db import KBConnection, KBConnectionError, validate_schema
 from kb.commands import register_command
+from kb.framework.exceptions import DatabaseError, PipelineError
 
 
 @register_command
@@ -98,7 +99,7 @@ class AuditCommand(BaseCommand):
             if check_method and callable(check_method):
                 try:
                     check_method()
-                except Exception as e:
+                except DatabaseError as e:
                     log.error(f"Check '{check_name}' failed: {e}")
                     if self._args.verbose:
                         import traceback
@@ -351,7 +352,7 @@ class AuditCommand(BaseCommand):
             
         except ImportError:
             self._add_issue('WARNING', 'chroma_sync', 'ChromaDB not available')
-        except Exception as e:
+        except DatabaseError as e:
             self._add_issue('WARNING', 'chroma_sync', f"ChromaDB check failed: {e}")
     
     def _check_orphaned_entries(self) -> None:

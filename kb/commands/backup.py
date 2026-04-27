@@ -22,6 +22,7 @@ from typing import Optional
 from kb.base.command import BaseCommand
 from kb.base.config import KBConfig
 from kb.commands import register_command
+from kb.framework.exceptions import PipelineError
 
 
 @register_command
@@ -94,7 +95,7 @@ class BackupCommand(BaseCommand):
             print(f"📦 Backup saved to: {backup_root}")
             return self.EXIT_SUCCESS
             
-        except Exception as e:
+        except PipelineError as e:
             log.error(f"Backup failed: {e}")
             print(f"❌ Backup failed: {e}", file=sys.stderr)
             return self.EXIT_EXECUTION_ERROR

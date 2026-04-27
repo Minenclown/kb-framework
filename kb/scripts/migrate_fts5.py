@@ -23,7 +23,8 @@ try:
     from kb.framework.paths import get_default_db_path
     DB_PATH = str(get_default_db_path())
 except ImportError:
-    from config import DB_PATH
+    from kb.base.config import KBConfig
+    DB_PATH = str(KBConfig.get_instance().db_path)
 from kb.framework.fts5_setup import (
     check_fts5_available,
     setup_fts5,

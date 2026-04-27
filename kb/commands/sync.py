@@ -22,6 +22,7 @@ from kb.base.db import KBConnection, KBConnectionError
 from kb.commands import register_command
 from kb.framework.chroma_integration import get_chroma, embed_batch
 from kb.framework.batching import batched, BatchProgress, batched_chroma_upsert, batched_chroma_delete
+from kb.framework.exceptions import DatabaseError, PipelineError
 
 
 @register_command
@@ -129,7 +130,7 @@ class SyncCommand(BaseCommand):
             collection = chroma.client.get_collection(name="kb_sections")
             results = collection.get(include=[])
             return set(results['ids'])
-        except Exception as e:
+        except DatabaseError as e:
             self.get_logger().warning(f"ChromaDB read error: {e}")
             return set()
     
@@ -247,7 +248,7 @@ class SyncCommand(BaseCommand):
             
             return self.EXIT_SUCCESS
             
-        except Exception as e:
+        except PipelineError as e:
             log.error(f"Delta sync failed: {e}")
             return self.EXIT_EXECUTION_ERROR
     
@@ -345,7 +346,7 @@ class SyncCommand(BaseCommand):
             
             return self.EXIT_SUCCESS
             
-        except Exception as e:
+        except PipelineError as e:
             log.error(f"File sync failed: {e}")
             return self.EXIT_EXECUTION_ERROR
     
@@ -470,7 +471,7 @@ class SyncCommand(BaseCommand):
                 )
                 processed += upsert_result.success
                 progress.advance(len(batch_ids), failed=upsert_result.failed)
-            except Exception as exc:
+            except PipelineError as exc:
                 log.error(f"Upsert batch failed: {exc}")
                 progress.advance(len(batch_ids), failed=len(batch_ids))
         
@@ -499,6 +500,6 @@ class SyncCommand(BaseCommand):
             if result.failed > 0:
                 log.warning(f"Failed to delete {result.failed} orphans")
             return result.success
-        except Exception as e:
+        except PipelineError as e:
             log.error(f"Failed to delete orphans: {e}")
             return 0
