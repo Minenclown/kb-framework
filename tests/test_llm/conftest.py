@@ -19,18 +19,26 @@ from kb.biblio.config import LLMConfig
 # --- Fixtures ---
 
 
-@pytest.fixture(scope="session")
-def llm_config() -> LLMConfig:
+@pytest.fixture(scope="function")
+def llm_config(tmp_path) -> LLMConfig:
     """Create a test LLM config with validation skipped."""
+    from unittest.mock import MagicMock
+    
     LLMConfig.reset()
-    config = LLMConfig(
-        model="gemma4:e2b",
-        ollama_url="http://localhost:11434",
-        timeout=30,
-        temperature=0.7,
-        skip_validation=True
-    )
-    return config
+    
+    # Create a mock KB config with tmp_path
+    mock_kb_config = MagicMock()
+    mock_kb_config.base_path = tmp_path
+    
+    with patch('kb.biblio.config.get_config', return_value=mock_kb_config):
+        config = LLMConfig(
+            model="gemma4:e2b",
+            ollama_url="http://localhost:11434",
+            timeout=30,
+            temperature=0.7,
+            skip_validation=True
+        )
+        return config
 
 
 @pytest.fixture

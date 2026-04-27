@@ -175,7 +175,7 @@ class TestOllamaEngineGenerate:
             assert call_count[0] == 3
             assert response.content == "Mocked LLM response text"
     
-    def test_generate_max_retries_exceeded(self, ollama_engine):
+    def test_generate_max_retries_exceeded(self, ollama_engine, llm_config):
         """Test that max retries are enforced."""
         with patch.object(ollama_engine, '_make_request') as mock_request:
             mock_request.side_effect = OllamaConnectionError("Persistent failure")

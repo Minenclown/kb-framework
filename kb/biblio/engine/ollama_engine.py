@@ -67,14 +67,30 @@ class OllamaEngine:
     _instance: Optional['OllamaEngine'] = None
     _lock = threading.Lock()
     
+    def __new__(
+        cls,
+        config: Optional[LLMConfig] = None,
+        skip_auto_init: bool = False
+    ):
+        """Singleton - only one instance exists."""
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._config = config or get_llm_config()
+                    cls._instance._config.ensure_dirs()
+                    cls._instance._client_version = "0.1.0"
+                    cls._instance._session_active = False
+                    cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(
         self,
         config: Optional[LLMConfig] = None,
         skip_auto_init: bool = False
     ):
-        if OllamaEngine._instance is not None:
-            # Return existing instance for convenience
-            logger.debug("Returning existing OllamaEngine instance")
+        # Avoid re-initializing singleton
+        if self._initialized:
             return
         
         self._config = config or get_llm_config()
@@ -82,8 +98,8 @@ class OllamaEngine:
         
         self._client_version = "0.1.0"  # Ollama Python client version
         self._session_active = False
+        self._initialized = True
         
-        OllamaEngine._instance = self
         logger.info(
             f"OllamaEngine initialized",
             extra={
