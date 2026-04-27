@@ -101,7 +101,7 @@ class KBConnection:
                     if not pragma.replace('_', '').isalnum():
                         raise KBConnectionError(f"Invalid pragma name: {pragma}")
                     # Validate value: must be int or a known safe string
-                    if not isinstance(value, int) and not (isinstance(value, str) and value.isalnum()):
+                    if not isinstance(value, int) and not (isinstance(value, str) and value.lstrip('-').isdigit()):
                         raise KBConnectionError(f"Invalid pragma value for {pragma}: {value!r}")
                     # f-string removed: PRAGMA cannot be parameterized,
                     # validated inputs are safe to interpolate.

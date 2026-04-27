@@ -301,8 +301,10 @@ class VaultWriter:
         else:
             wikilink = f"[[{target}]]"
         
-        # Check if link already exists
-        if wikilink in content:
+        # Check if link already exists (handle [[target|alias]] format)
+        import re
+        link_pattern = re.compile(r'\s*\|[|\s]\s*'.join(re.escape(target.split('|')[0] if '|' in target else target)))
+        if link_pattern.search(content) or wikilink in content:
             return  # Link already present
         
         # Append to end of file

@@ -223,13 +223,12 @@ class BacklinkIndexer:
         
         for source_key, backlinks in self._backlink_index.items():
             for backlink in backlinks:
-                target = backlink['source']
-                if target not in graph:
-                    graph[target] = []
-                # Get the target note name from the link
-                link_text = backlink['link_text']
-                if link_text not in graph[target]:
-                    graph[target].append(link_text)
+                source = backlink['source']
+                target = backlink['link_text']
+                if source not in graph:
+                    graph[source] = []
+                if target not in graph[source]:
+                    graph[source].append(target)
         
         return graph
     

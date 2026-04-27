@@ -366,7 +366,7 @@ class SyncManager:
             return rows
         except Exception as e:
             logger.warning(f"KB read error: {e}")
-            return []
+            raise
 
     def _find_kb_entry_by_title(self, title: str) -> Optional[dict]:
         """Find a KB entry by title (case-insensitive)."""
