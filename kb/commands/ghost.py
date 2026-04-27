@@ -157,7 +157,7 @@ class GhostCommand(BaseCommand):
         return [
             config.library_path,
             config.workspace_path,
-            Path.home() / "knowledge" / "library" / "Gesundheit",
+            config.library_path / "Gesundheit",
         ]
     
     def _get_extensions(self) -> Set[str]:

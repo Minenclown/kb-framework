@@ -107,25 +107,25 @@
 
 ## Batch 5 — Niedrig (Library/knowledge_base - interne Module)
 
-### 13. `library/knowledge_base/hybrid_search.py` 🔵
+### 13. `kb/framework/hybrid_search.py` 🔵
 **Priorität:** 13  
 **Grund:** 3 Classes, 17 Functions, 77 Inline. Höchste Inline-Dichte. Umlaute in 2 Inline + 2 Func-Docs.  
 **Aktion:** German-Umlaute bereinigen, Docstrings konsolidieren  
 **Status:** ⚠️ DE, viele Umlaute
 
-### 14. `library/knowledge_base/embedding_pipeline.py` 🔵
+### 14. `kb/framework/embedding_pipeline.py` 🔵
 **Priorität:** 14  
 **Grund:** 3 Classes, 14 Functions, 36 Inline. Umlaute in 1 Inline + 2 Class + 9 Func-Docs.  
 **Aktion:** Umlaute bereinigen, Class-Docstrings EN  
 **Status:** ⚠️ DE, 12 Umlaute-Instanzen
 
-### 15. `library/knowledge_base/chroma_integration.py` 🔵
+### 15. `kb/framework/chroma_integration.py` 🔵
 **Priorität:** 15  
 **Grund:** 1 Class, 18 Functions, 25 Inline. Umlaute in 1 Class + 10 Func-Docs.  
 **Aktion:** Umlaute bereinigen  
 **Status:** ⚠️ DE, 11 Umlaute-Instanzen
 
-### 16. `library/knowledge_base/chroma_plugin.py` 🔵
+### 16. `kb/framework/chroma_plugin.py` 🔵
 **Priorität:** 16  
 **Grund:** 2 Classes, 13 Functions, 22 Inline. Umlaute in 5 Inline + 1 Class + 8 Func-Docs.  
 **Aktion:** Umlaute bereinigen  
@@ -141,7 +141,7 @@
 | `__init__.py` | Core, kein Bedarf |
 | `scripts/__init__.py` | Minimale Datei |
 | `library/__init__.py` | Minimale Datei |
-| `library/knowledge_base/__init__.py` | Minimale Datei |
+| `kb/framework/__init__.py` | Minimale Datei |
 | `scripts/kb_warmup.py` | Nur 0/1 Functions, nicht kritisch |
 | `obsidian/__init__.py` | EN, vollständig |
 | `obsidian/parser.py` | EN, vollständig |
@@ -161,7 +161,7 @@ indexer.py (Batch 1)
   └── Core-Indexer, importiert von obsidian/*
       → Parse-Fehler VOR obsidian/* beheben
 
-library/knowledge_base/* (Batch 5)
+kb/framework/* (Batch 5)
   └── Internal, importiert von obsidian/* und scripts/*
       → NACHDEM Core + Scripts fertig
 ```
@@ -188,6 +188,6 @@ Phase 5: Batch 5 (4 Dateien) — Library intern (niedrigste Priorität)
 - `obsidian/*` ist bereits vollständig EN ✓
 - `__main__.py`, `update.py` sind EN ✓
 - `scripts/index_pdfs.py` hat EN-Modul-Docstring aber DE-Class/Func-Docs (inkonsistent)
-- `library/knowledge_base/*` ist durchgehend DE (viel Arbeit nötig)
+- `kb/framework/*` ist durchgehend DE (viel Arbeit nötig)
 
 **Konsequenz:** ~55 DE-Function-Docstrings → EN konvertieren.

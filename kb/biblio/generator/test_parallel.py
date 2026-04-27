@@ -6,8 +6,8 @@ No engine imports - pure logic testing.
 
 import difflib
 import json
-import os
 import sys
+from pathlib import Path
 
 # ---- Data classes (copied from parallel_mixin for isolated testing) ----
 
@@ -538,10 +538,11 @@ def test_parallel_result_to_dict():
 
 def test_source_structure():
     """Verify the actual source files have all required components."""
-    mixin_path = os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/parallel_mixin.py")
-    essence_path = os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/essence_generator.py")
-    report_path = os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/report_generator.py")
-    init_path = os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/__init__.py")
+    _gen_dir = Path(__file__).resolve().parent
+    mixin_path = _gen_dir / "parallel_mixin.py"
+    essence_path = _gen_dir / "essence_generator.py"
+    report_path = _gen_dir / "report_generator.py"
+    init_path = _gen_dir / "__init__.py"
 
     with open(mixin_path) as f:
         mixin_src = f.read()
@@ -615,11 +616,12 @@ def test_source_structure():
 def test_syntax_all_files():
     """Verify all modified files have valid Python syntax."""
     import ast
+    _gen_dir = Path(__file__).resolve().parent
     files = [
-        os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/parallel_mixin.py"),
-        os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/essence_generator.py"),
-        os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/report_generator.py"),
-        os.path.expanduser("~/projects/kb-framework/kb/biblio/generator/__init__.py"),
+        _gen_dir / "parallel_mixin.py",
+        _gen_dir / "essence_generator.py",
+        _gen_dir / "report_generator.py",
+        _gen_dir / "__init__.py",
     ]
     for fpath in files:
         with open(fpath) as f:

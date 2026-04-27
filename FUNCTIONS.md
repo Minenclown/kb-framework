@@ -9,7 +9,7 @@
 2. [Base Module (`kb.base`)](#2-base-module-kbbase)
 3. [Commands (`kb.commands`)](#3-commands-kbcommands)
 4. [Obsidian Module (`kb.obsidian`)](#4-obsidian-module-kbobsidian)
-5. [Knowledge Base Module (`kb.library.knowledge_base`)](#5-knowledge-base-module-kblibraryknowledge_base)
+5. [Knowledge Base Module (`kb.framework`)](#5-knowledge-base-module-kbframework)
 6. [Indexer & Updater](#6-indexer--updater)
 7. [LLM Module (`kb.llm`)](#7-llm-module-kbllm)
 8. [Abhängigkeiten](#9-abhängigkeiten)
@@ -49,7 +49,7 @@ kb-framework/
 │   ├── vault.py                # High-Level Vault API
 │   └── writer.py               # Vault Write Operations
 │
-├── kb/library/knowledge_base/  # Vector Search
+├── kb/framework/  # Vector Search
 │   ├── chroma_integration.py   # ChromaDB Interface
 │   ├── hybrid_search.py        # Hybrid Search (Phase 1-6)
 │   ├── fts5_setup.py           # SQLite FTS5 Setup
@@ -404,14 +404,14 @@ writer.delete_note("Notes/Old.md")
 
 ---
 
-## 5. Knowledge Base Module (`kb.library.knowledge_base`)
+## 5. Knowledge Base Module (`kb.framework`)
 
-### HybridSearch (`kb.library.knowledge_base.hybrid_search`)
+### HybridSearch (`kb.framework.hybrid_search`)
 
 **Kombinierte Semantic + Keyword Suche.**
 
 ```python
-from kb.library.knowledge_base.hybrid_search import HybridSearch
+from kb.framework.hybrid_search import HybridSearch
 
 searcher = HybridSearch(
     db_path="library/biblio.db",
@@ -472,12 +472,12 @@ class SearchResult:
 
 ---
 
-### ChromaIntegration (`kb.library.knowledge_base.chroma_integration`)
+### ChromaIntegration (`kb.framework.chroma_integration`)
 
 **ChromaDB Wrapper mit Thread-Safety.**
 
 ```python
-from kb.library.knowledge_base.chroma_integration import ChromaIntegration
+from kb.framework.chroma_integration import ChromaIntegration
 
 chroma = ChromaIntegration(chroma_path="library/chroma_db/")
 
@@ -495,12 +495,12 @@ stats = chroma.get_collection_stats("kb_sections")
 
 ---
 
-### EmbeddingPipeline (`kb.library.knowledge_base.embedding_pipeline`)
+### EmbeddingPipeline (`kb.framework.embedding_pipeline`)
 
 **Batch-Embedding für file_sections.**
 
 ```python
-from kb.library.knowledge_base.embedding_pipeline import EmbeddingPipeline
+from kb.framework.embedding_pipeline import EmbeddingPipeline
 
 pipeline = EmbeddingPipeline(
     db_path="library/biblio.db",
@@ -533,12 +533,12 @@ class SectionRecord:
 
 ---
 
-### Reranker (`kb.library.knowledge_base.reranker`)
+### Reranker (`kb.framework.reranker`)
 
 **Cross-Encoder Re-Ranking.**
 
 ```python
-from kb.library.knowledge_base.reranker import Reranker, get_reranker
+from kb.framework.reranker import Reranker, get_reranker
 
 reranker = get_reranker()
 
@@ -548,12 +548,12 @@ reranked = reranker.rerank(query, results)
 
 ---
 
-### SynonymExpander (`kb.library.knowledge_base.synonyms`)
+### SynonymExpander (`kb.framework.synonyms`)
 
 **Query Expansion mit Synonymen.**
 
 ```python
-from kb.library.knowledge_base.synonyms import SynonymExpander, get_expander
+from kb.framework.synonyms import SynonymExpander, get_expander
 
 expander = get_expander()
 expanded = expander.expand_query("machine learning")
@@ -841,7 +841,7 @@ with BiblioIndexer(config.db_path) as indexer:
     indexer.index_directory("/path/to/docs")
 
 # Suche
-from kb.library.knowledge_base.hybrid_search import HybridSearch
+from kb.framework.hybrid_search import HybridSearch
 searcher = HybridSearch(db_path=config.db_path, chroma_path=config.chroma_path)
 results = searcher.search("Suchanfrage")
 for r in results:

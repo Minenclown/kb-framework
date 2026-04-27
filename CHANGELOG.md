@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.2] - 2026-04-27
+
+### Documentation Updates
+
+- **SKILL.md complete rewrite**:
+  - Fixed all incorrect paths (`/opt/kb/` → `~/.openclaw/kb/`, `bin/` → `kb/scripts/`, `config/kb.py` → `kb/base/config.py`)
+  - Added Workflows section
+  - Added API Reference section
+  - Added Troubleshooting section
+  - Added Common Issues table
+  - Updated Architecture diagram with correct paths
+  - Verified all paths against actual file structure
+
+- **README.md updated**:
+  - Added `**Last Updated:** 2026-04-27`
+  - Updated emojis for consistency
+
 ## [1.1.1] - 2026-04-16
 
 ### 🚨 Breaking Changes
@@ -424,7 +441,7 @@ class VaultWriter:
 - **Lösung:** Datei vollständig entfernt (Commit 2026-04-15)
 - **Grund:** Alle relevanten Imports wurden bereits auf `kb.base.config` umgestellt (W1, W2)
 - **Geänderte Dateien:**
-  - `kb/library/knowledge_base/embedding_pipeline.py` - Fallback-Import entfernt
-  - `kb/library/knowledge_base/chroma_plugin.py` - Fallback-Import entfernt
+  - `kb/framework/embedding_pipeline.py` - Fallback-Import entfernt
+  - `kb/framework/chroma_plugin.py` - Fallback-Import entfernt
   - `kb/config.py` - gelöscht
 - **Status:** ✅ Tests bestanden

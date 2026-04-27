@@ -40,11 +40,11 @@ Generiert: 2026-04-13
 | `scripts/sanitize.py` | EN | 0/0 | 4/4 | 18 | — |
 | `scripts/sync_chroma.py` | EN? | 0/0 | 5/6 | 5 | German-Umlauts (2x func-doc) |
 | `library/__init__.py` | NONE | 0/0 | 0/0 | 0 | — |
-| `library/knowledge_base/__init__.py` | NONE | 0/0 | 0/0 | 0 | — |
-| `library/knowledge_base/chroma_integration.py` | **DE** | 1/1 | 18/18 | 25 | German-Umlauts (1 class-doc, 10 func-docs) |
-| `library/knowledge_base/chroma_plugin.py` | **DE** | 2/2 | 13/13 | 22 | German-Umlauts (1 class-doc, 8 func-docs, 5x inline) |
-| `library/knowledge_base/embedding_pipeline.py` | **DE** | 3/3 | 14/14 | 36 | German-Umlauts (2 class-docs, 9 func-docs, 1x inline) |
-| `library/knowledge_base/hybrid_search.py` | **DE** | 3/3 | 17/17 | 77 | German-Umlauts (2 func-docs, 2x inline) |
+| `kb/framework/__init__.py` | NONE | 0/0 | 0/0 | 0 | — |
+| `kb/framework/chroma_integration.py` | **DE** | 1/1 | 18/18 | 25 | German-Umlauts (1 class-doc, 10 func-docs) |
+| `kb/framework/chroma_plugin.py` | **DE** | 2/2 | 13/13 | 22 | German-Umlauts (1 class-doc, 8 func-docs, 5x inline) |
+| `kb/framework/embedding_pipeline.py` | **DE** | 3/3 | 14/14 | 36 | German-Umlauts (2 class-docs, 9 func-docs, 1x inline) |
+| `kb/framework/hybrid_search.py` | **DE** | 3/3 | 17/17 | 77 | German-Umlauts (2 func-docs, 2x inline) |
 
 ## Probleme im Detail
 
@@ -61,15 +61,15 @@ Folgende Dateien enthalten deutsche Umlaute (äöüÄÖÜß) in Docstrings oder 
 - `scripts/kb_warmup.py` — Modul-Docstring
 - `scripts/sync_chroma.py` — 2× Function-Docstring
 - `scripts/kb_full_audit.py` — 8× Inline, 8× Function-Docstring
-- `library/knowledge_base/hybrid_search.py` — 2× Inline, 2× Function-Docstring
-- `library/knowledge_base/chroma_integration.py` — 1 Class-Docstring, 10× Function-Docstring
-- `library/knowledge_base/embedding_pipeline.py` — 1× Inline, 2 Class-Docstrings, 9× Function-Docstring
-- `library/knowledge_base/chroma_plugin.py` — 5× Inline, 1 Class-Docstring, 8× Function-Docstring
+- `kb/framework/hybrid_search.py` — 2× Inline, 2× Function-Docstring
+- `kb/framework/chroma_integration.py` — 1 Class-Docstring, 10× Function-Docstring
+- `kb/framework/embedding_pipeline.py` — 1× Inline, 2 Class-Docstrings, 9× Function-Docstring
+- `kb/framework/chroma_plugin.py` — 5× Inline, 1 Class-Docstring, 8× Function-Docstring
 
 ### ⚠️ Fehlende Modul-Docstrings (10 Dateien)
 - `__init__.py`, `config.py`, `version.py`, `indexer.py`
 - `scripts/__init__.py`, `scripts/migrate.py`
-- `library/__init__.py`, `library/knowledge_base/__init__.py`
+- `kb/framework/__init__.py`
 
 ### ⚠️ Keine Docstrings Coverage
 - `config.py` — 0 Classes, 0 Functions, aber 6 Inline-Kommentare (evtl. Docstrings als inline?)

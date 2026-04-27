@@ -22,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kb.base.config import KBConfig
 from kb.indexer import BiblioIndexer
-from kb.knowledge_base.chroma_integration import get_chroma
-from kb.knowledge_base.embedding_pipeline import EmbeddingPipeline
+from kb.framework.chroma_integration import get_chroma
+from kb.framework.embedding_pipeline import EmbeddingPipeline
 
 # Logging
 logging.basicConfig(

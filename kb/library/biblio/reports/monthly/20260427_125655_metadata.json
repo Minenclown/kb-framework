@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "title": "Monthly Review",
+  "report_type": "monthly",
+  "generated_at": "2026-04-27T12:56:55.542256+00:00",
+  "query": "Review this month",
+  "model": "gemma4:e2b",
+  "sources": [
+    "abc123",
+    "def456"
+  ]
+}

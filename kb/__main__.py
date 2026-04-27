@@ -43,8 +43,12 @@ PARENT_DIR = KB_DIR.parent  # This is kb-framework/ directory
 if str(PARENT_DIR) not in sys.path:
     sys.path.insert(0, str(PARENT_DIR))
 
-# Setup paths for KB installation
-KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
+# Setup paths for KB installation — delegate to paths.py
+try:
+    from kb.framework.paths import get_default_base_path
+    KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(get_default_base_path()))
+except Exception:
+    KB_BASE_PATH = os.getenv("KB_BASE_PATH", str(Path.home() / ".openclaw" / "kb"))
 os.environ.setdefault("KB_BASE_PATH", KB_BASE_PATH)
 
 

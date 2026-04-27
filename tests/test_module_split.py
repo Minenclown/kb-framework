@@ -14,7 +14,7 @@ import sys
 import importlib.util
 from pathlib import Path
 
-PROJECT_ROOT = Path("/home/lumen/projects/kb-framework")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 GENERATOR_DIR = PROJECT_ROOT / "kb" / "biblio" / "generator"
 AGGREGATORS_DIR = GENERATOR_DIR / "aggregators"
 

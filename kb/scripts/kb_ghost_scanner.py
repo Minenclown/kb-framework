@@ -18,19 +18,34 @@ from pathlib import Path
 from datetime import datetime
 import csv
 
-# Configuration
-DB_PATH = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
-LIBRARY_PATH = Path.home() / "knowledge" / "library"
-OUTPUT_DIR = Path.home() / "knowledge" / "library" / "audit"
+# Configuration - use KBConfig for portable paths
+try:
+    from kb.base.config import KBConfig
+    _config = KBConfig.get_instance()
+    DB_PATH = _config.db_path
+    LIBRARY_PATH = _config.library_path
+    OUTPUT_DIR = _config.library_path / "audit"
+    CACHE_FILE = _config.ghost_cache_path
+    _WORKSPACE = _config.workspace_path
+except ImportError:
+    from kb.framework.paths import (
+        get_default_db_path, get_default_library_path,
+        get_default_ghost_cache_path, get_default_workspace_path,
+    )
+    DB_PATH = get_default_db_path()
+    LIBRARY_PATH = get_default_library_path()
+    OUTPUT_DIR = LIBRARY_PATH / "audit"
+    CACHE_FILE = get_default_ghost_cache_path()
+    _WORKSPACE = get_default_workspace_path()
+
 OUTPUT_FILE = OUTPUT_DIR / "ghost_files.csv"
 LOG_FILE = OUTPUT_DIR / "audit_log.md"
-CACHE_FILE = Path.home() / ".knowledge" / "ghost_cache.json"
 
 # Directories to monitor
 SCAN_DIRS = [
     LIBRARY_PATH,
-    Path.home() / ".openclaw" / "workspace",
-    Path.home() / "knowledge" / "library" / "Gesundheit",
+    _WORKSPACE,
+    LIBRARY_PATH / "Gesundheit",
 ]
 
 # Phase 2.3: Extended file extensions (with warning for non-directly indexable)

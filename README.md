@@ -300,7 +300,7 @@ source ~/.bashrc
 ### Search (HybridSearch)
 
 ```python
-from kb.knowledge_base import HybridSearch
+from kb.framework import HybridSearch
 
 # Initialize search
 search = HybridSearch()
@@ -316,7 +316,7 @@ for r in results:
 ### ChromaDB Integration
 
 ```python
-from kb.knowledge_base import ChromaIntegration, embed_text
+from kb.framework import ChromaIntegration, embed_text
 
 # Get singleton instance
 chroma = ChromaIntegration.get_instance()
@@ -336,7 +336,7 @@ results = collection.query(
 ### Text Chunking
 
 ```python
-from kb.knowledge_base import SentenceChunker, chunk_document
+from kb.framework import SentenceChunker, chunk_document
 
 # Configure chunker
 chunker = SentenceChunker(max_chunk_size=500, overlap=50)
@@ -371,8 +371,8 @@ from kb.base.config import KBConfig
 from kb.base.logger import KBLogger
 from kb.base.db import KBConnection
 
-# Knowledge base (re-exports from src.library via kb.knowledge_base)
-from kb.knowledge_base import HybridSearch, ChromaIntegration
+# Knowledge base (re-exports from kb.framework)
+from kb.framework import HybridSearch, ChromaIntegration
 
 # Obsidian integration
 from kb.obsidian import ObsidianVault

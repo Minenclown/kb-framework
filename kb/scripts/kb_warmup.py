@@ -8,9 +8,12 @@ Purpose: First query should not be 8s slow
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / ".openclaw" / "kb"))
+# Add project root to path (portable)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent.parent
+sys.path.insert(0, str(project_root))
 
-from kb.knowledge_base.chroma_integration import get_chroma
+from kb.framework.chroma_integration import get_chroma
 
 def warmup():
     print("Warming up ChromaDB model...")

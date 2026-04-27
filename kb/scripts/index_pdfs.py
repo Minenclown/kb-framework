@@ -20,6 +20,7 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 # Import the indexer
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -113,10 +114,10 @@ class TesseractOCR:
     def _ocr_page_worker(cls, args: tuple) -> tuple:
         """Worker function for parallel Tesseract OCR."""
         page_num, img_bytes, tmpdir = args
-        img_path = os.path.join(tmpdir, f"page_{page_num}.png")
-        with open(img_path, 'wb') as f:
+        img_path = Path(tmpdir) / f"page_{page_num}.png"
+        with open(str(img_path), 'wb') as f:
             f.write(img_bytes)
-        txt = cls.ocr_image(img_path)
+        txt = cls.ocr_image(str(img_path))
         return page_num, txt
     
     @classmethod
@@ -247,10 +248,10 @@ class OCRProcessor:
     def _ocr_page_worker(cls, args: tuple) -> tuple:
         """Worker function for parallel OCR processing."""
         page_num, img_bytes, tmpdir = args
-        img_path = os.path.join(tmpdir, f"page_{page_num}.png")
-        with open(img_path, 'wb') as f:
+        img_path = Path(tmpdir) / f"page_{page_num}.png"
+        with open(str(img_path), 'wb') as f:
             f.write(img_bytes)
-        txt = cls.ocr_image(img_path, detail=0)
+        txt = cls.ocr_image(str(img_path), detail=0)
         return page_num, txt
     
     @classmethod
@@ -321,9 +322,21 @@ class OCRProcessor:
 
 class PDFIndexer:
     """Extract text from PDFs and index into knowledge base."""
-    
-    # Path to ChromaDB integration
-    CHROMA_INTEGRATION_PATH = str(Path.home() / "knowledge" / "library" / "knowledge_base")
+
+    # Path to ChromaDB integration — resolved lazily via KBConfig
+    CHROMA_INTEGRATION_PATH: Optional[str] = None
+
+    @classmethod
+    def _get_chroma_path(cls) -> str:
+        if cls.CHROMA_INTEGRATION_PATH is not None:
+            return cls.CHROMA_INTEGRATION_PATH
+        try:
+            from kb.base.config import KBConfig
+            cls.CHROMA_INTEGRATION_PATH = str(KBConfig.get_instance().knowledge_base_path)
+        except Exception:
+            from kb.framework.paths import get_default_base_path
+            cls.CHROMA_INTEGRATION_PATH = str(get_default_base_path() / "framework")
+        return cls.CHROMA_INTEGRATION_PATH
     
     STOPWORDS = {
         'der', 'die', 'das', 'und', 'oder', 'mit', 'fuer', 'von', 'auf', 'in', 'zu',
@@ -722,7 +735,12 @@ def main():
         print("  Supports: .pdf (with OCR fallback), .jpg, .png, .gif, .bmp, .webp, .tiff")
         sys.exit(1)
     
-    db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
+    try:
+        from kb.base.config import KBConfig
+        db_path = KBConfig.get_instance().db_path
+    except (ImportError, AttributeError):
+        from kb.framework.paths import get_default_db_path
+        db_path = get_default_db_path()
     
     with BiblioIndexer(str(db_path)) as indexer:
         pdf_indexer = PDFIndexer(indexer)

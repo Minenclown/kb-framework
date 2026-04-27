@@ -3,6 +3,7 @@
 **Version:** 1.1.1  
 **Category:** Knowledge Base / Search  
 **Requires:** Python 3.9+, SQLite, ChromaDB  
+**Location:** `~/.openclaw/kb/`
 
 ---
 
@@ -13,9 +14,9 @@ A complete Knowledge Base with:
 - **Automatic Indexing** (Markdown, PDF, OCR)
 - **SQLite + ChromaDB** Integration
 - **Daily Audits** for data quality
-- **LLM Integration** (Ollama/Gemma4, HuggingFace Transformers) for essence generation, reports, file watching, and scheduled jobs *(Neu in 1.1.1)*
-- **EngineRegistry** – Central singleton for multi-engine support *(Neu in 1.1.1)*
-- **Generator Parallel Support** – primary_first, aggregate, compare *(Neu in 1.1.1)*
+- **LLM Integration** (Ollama/Gemma4, HuggingFace Transformers) for essence generation, reports, file watching, and scheduled jobs
+- **EngineRegistry** – Central singleton for multi-engine support
+- **Generator Parallel Support** – primary_first, aggregate, compare
 
 ---
 
@@ -24,27 +25,76 @@ A complete Knowledge Base with:
 ### 1. Install the Skill
 ```bash
 # Clone or extract into your OpenClaw workspace
-cp -r kb-framework ~/.openclaw/workspace/
+git clone https://github.com/Minenclown/kb-framework.git ~/.openclaw/kb
 
-# Or just the skill:
-cp kb-framework/SKILL.md ~/.npm-global/lib/node_modules/openclaw/skills/kb/
+# Or manually:
+cp -r kb-framework ~/.openclaw/kb
 ```
 
 ### 2. Install Dependencies
 ```bash
+cd ~/.openclaw/kb
 pip install -r requirements.txt
+
+# Optional: HuggingFace Transformers support
+pip install -r requirements-transformers.txt
 ```
 
 ### 3. Initialize Database
 ```bash
-python3 ~/.openclaw/workspace/kb-framework/kb/indexer.py --init
+python3 ~/.openclaw/kb/kb/indexer.py --init
+```
+
+### 4. Add CLI Alias
+```bash
+# Add to .bashrc for global access:
+alias kb="bash ~/.openclaw/kb/kb.sh"
+source ~/.bashrc
 ```
 
 ---
 
 ## Configuration
 
-Set environment variable KB_DB_PATH or edit kb/config.py
+Configuration is managed via `kb/base/config.py`:
+
+```python
+from kb.base.config import KBConfig
+
+# Get singleton instance
+config = KBConfig.get_instance()
+
+# Key properties:
+config.base_path        # ~/.openclaw/kb
+config.db_path          # ~/.openclaw/kb/knowledge.db
+config.library_path     # ~/.openclaw/kb/library
+config.chroma_path      # ~/.openclaw/kb/chroma_db
+
+# Environment variable override:
+# KB_BASE_PATH=/custom/path
+```
+
+### LLM Configuration (`kb/biblio/config.py`)
+
+```python
+from kb.biblio.config import LLMConfig
+
+config = LLMConfig.get_instance()
+print(f"Source: {config.model_source}")      # auto, ollama, huggingface, compare
+print(f"Model: {config.model}")              # Full model name
+print(f"HF Model: {config.hf_model_name}")   # google/gemma-2-2b-it
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `KB_BASE_PATH` | `~/.openclaw/kb` | Base installation path |
+| `KB_LLM_MODEL_SOURCE` | `auto` | Engine: ollama/huggingface/auto/compare |
+| `KB_LLM_OLLAMA_MODEL` | `gemma4:e2b` | Ollama model name |
+| `KB_LLM_HF_MODEL` | `google/gemma-2-2b-it` | HuggingFace model |
+| `KB_LLM_PARALLEL_MODE` | `false` | Enable parallel generation |
+| `KB_LLM_PARALLEL_STRATEGY` | `primary_first` | primary_first/aggregate/compare |
 
 ---
 
@@ -53,22 +103,24 @@ Set environment variable KB_DB_PATH or edit kb/config.py
 ### Python API
 
 ```python
-# Import
 import sys
-sys.path.insert(0, "/path/to/kb-framework")
+sys.path.insert(0, "~/.openclaw/kb")
+
+# Core Indexer
 from kb.indexer import BiblioIndexer
 
-# Index a file
-with BiblioIndexer("/path/to/knowledge.db") as idx:
+with BiblioIndexer("~/.openclaw/kb/knowledge.db") as idx:
     idx.index_file("/path/to/file.md")
 
-# Search
-from kb.library.knowledge_base.hybrid_search import HybridSearch
+# Hybrid Search
+from kb.framework.hybrid_search import HybridSearch
 hs = HybridSearch()
 results = hs.search("Your search term", limit=10)
 
-# LLM Engine API (Neu in 1.1.1)
-from kb.biblio import LLMConfig, EngineRegistry, create_engine
+# LLM Engine API
+from kb.biblio.config import LLMConfig
+from kb.biblio.engine.registry import EngineRegistry
+from kb.biblio.engine.factory import create_engine
 
 config = LLMConfig.get_instance()
 print(f"Source: {config.model_source}")
@@ -91,43 +143,43 @@ result = await generator.generate_essence(
 
 ### CLI (Recommended)
 
-The built-in `kb` command provides easy access:
-
 ```bash
-# Add to .bashrc for global access:
-alias kb="/path/to/kb-framework/kb.sh"
-
-# Commands:
+# Core commands:
 kb index /path/to/file.md        # Index a file
 kb search "machine learning"     # Search knowledge base
+kb sync                          # Sync ChromaDB with SQLite
 kb audit                         # Run full audit
 kb ghost                         # Find orphaned entries
 kb warmup                        # Preload ChromaDB model
+
+# LLM commands:
 kb llm status                    # LLM system status
-kb llm generate essence "topic" # Generate an essence
+kb llm generate essence "topic"  # Generate an essence
 kb llm generate report daily     # Generate a daily report
 kb llm watch start               # Start file watcher
 kb llm scheduler list            # List scheduled jobs
 kb llm config show               # Show LLM config
-kb llm engine status              # Show all engine status (Neu in 1.1.1)
-kb llm engine switch huggingface # Switch to HuggingFace (Neu in 1.1.1)
-kb llm engine test               # Test both engines (Neu in 1.1.1)
+
+# LLM Engine management:
+kb llm engine status             # Show all engine status
+kb llm engine switch huggingface # Switch to HuggingFace
+kb llm engine test               # Test both engines
 ```
 
-### Legacy Python Scripts
+### Legacy Scripts (`kb/scripts/`)
 
 ```bash
-# Index a new file
-python3 kb/indexer.py /path/to/file.md
+# Index PDFs with OCR
+python3 ~/.openclaw/kb/kb/scripts/index_pdfs.py /path/to/pdfs/
 
 # Ghost Scanner (finds orphaned DB entries)
-python3 kb/scripts/kb_ghost_scanner.py
+python3 ~/.openclaw/kb/kb/scripts/kb_ghost_scanner.py
 
 # Full Audit
-python3 kb/scripts/kb_full_audit.py
+python3 ~/.openclaw/kb/kb/scripts/kb_full_audit.py
 
 # ChromaDB Warmup (at boot)
-python3 kb/scripts/kb_warmup.py
+python3 ~/.openclaw/kb/kb/scripts/kb_warmup.py
 ```
 
 ---
@@ -135,39 +187,91 @@ python3 kb/scripts/kb_warmup.py
 ## Architecture
 
 ```
-kb-framework/
+~/.openclaw/kb/
 ├── SKILL.md                    # This file
 ├── README.md                   # Detailed documentation
-├── kb/
-│   ├── indexer.py              # Core Indexer (BiblioIndexer)
-│   ├── commands/               # CLI Commands: index, sync, audit, ghost, warmup, search, llm, engine
-│   ├── base/                    # Core: config.py, db.py, logger.py, command.py
-│   ├── biblio/                  # LLM Integration (Neu in 1.1.1)
-│   │   ├── engine/              # Engine modules
-│   │   │   ├── registry.py      # EngineRegistry Singleton (Neu in 1.1.1)
-│   │   │   ├── factory.py       # Engine Factory (Neu in 1.1.1)
-│   │   │   ├── base.py          # BaseLLMEngine Interface
-│   │   │   ├── ollama_engine.py # Ollama Engine
-│   │   │   └── transformers_engine.py # HuggingFace Engine (Neu in 1.1.1)
-│   │   ├── generator/           # Generators: essence, report
-│   │   ├── scheduler/           # Task scheduler
-│   │   └── config.py           # LLMConfig Singleton
-│   ├── library/
-│   │   └── knowledge_base/
-│   │       ├── hybrid_search.py       # Hybrid Search (semantic + keyword)
-│   │       ├── chroma_integration.py  # ChromaDB Wrapper
-│   │       ├── chroma_plugin.py       # ChromaDB Plugin (Collection Management)
-│   │       ├── embedding_pipeline.py # Batch Embeddings
-│   │       ├── reranker.py           # Search Result Reranker
-│   │       ├── fts5_setup.py          # SQLite FTS5 Full-Text Search
-│   │       ├── chunker.py            # Text Chunking
-│   │       └── synonyms.py            # Query Expansion
-│   └── obsidian/                # Obsidian Vault Integration
-└── scripts/
-    ├── index_pdfs.py          # PDF + OCR Indexing
-    ├── kb_ghost_scanner.py    # Legacy ghost scanner
-    ├── kb_full_audit.py       # Legacy audit script
-    └── kb_warmup.py           # Legacy warmup script
+├── CHANGELOG.md               # Version history
+├── kb.sh                       # CLI wrapper
+├── knowledge.db               # SQLite metadata database
+├── chroma_db/                  # ChromaDB vector database
+├── library/                    # Content library
+│   ├── content/               # Raw files (PDFs, studies)
+│   │   ├── Gesundheit/
+│   │   └── Medizin_Studien/
+│   └── agent/                 # Markdown files (agent docs)
+│       ├── memory/
+│       └── projektplanung/
+└── kb/                        # Python package
+    ├── __main__.py            # CLI entry point: python -m kb
+    ├── indexer.py             # Core Indexer (BiblioIndexer)
+    ├── config.py              # KB config facade
+    ├── update.py              # Auto-updater
+    │
+    ├── base/                  # Core components
+    │   ├── __init__.py
+    │   ├── config.py          # KBConfig singleton
+    │   ├── db.py              # KBConnection
+    │   ├── logger.py          # KBLogger
+    │   └── command.py         # Base command class
+    │
+    ├── commands/              # CLI commands
+    │   ├── __init__.py
+    │   ├── audit.py           # kb audit
+    │   ├── backup.py          # kb backup
+    │   ├── engine.py          # kb llm engine
+    │   ├── ghost.py           # kb ghost
+    │   ├── llm.py             # kb llm (status, generate, watch, scheduler)
+    │   ├── search.py          # kb search
+    │   ├── sync.py            # kb sync
+    │   └── warmup.py          # kb warmup
+    │
+    ├── biblio/                # LLM Integration
+    │   ├── config.py          # LLMConfig singleton
+    │   ├── engine/
+    │   │   ├── registry.py    # EngineRegistry singleton
+    │   │   ├── factory.py     # EngineFactory (Protocol)
+    │   │   ├── base.py        # BaseLLMEngine interface
+    │   │   ├── ollama_engine.py
+    │   │   └── transformers_engine.py
+    │   ├── generator/
+    │   │   ├── essence_generator.py
+    │   │   └── report_generator.py
+    │   ├── scheduler/
+    │   │   └── task_scheduler.py
+    │   └── templates/
+    │       ├── essence_template.md
+    │       └── report_template.md
+    │
+    ├── framework/             # Search & embeddings
+    │   ├── __init__.py
+    │   ├── hybrid_search/     # Hybrid search implementation
+    │   ├── providers/         # Search providers
+    │   ├── chroma_integration.py
+    │   ├── chroma_plugin.py   # Collection management
+    │   ├── embedding_pipeline.py
+    │   ├── reranker.py
+    │   ├── chunker.py
+    │   ├── fts5_setup.py
+    │   ├── synonyms.py
+    │   └── batching.py
+    │
+    ├── library/               # Library management
+    │   └── knowledge_base/
+    │
+    ├── obsidian/              # Obsidian vault integration
+    │   ├── vault.py
+    │   ├── parser.py
+    │   └── resolver.py
+    │
+    ├── scripts/               # Standalone scripts
+    │   ├── index_pdfs.py
+    │   ├── kb_full_audit.py
+    │   ├── kb_ghost_scanner.py
+    │   ├── kb_warmup.py
+    │   ├── sync_chroma.py
+    │   └── migrate_fts5.py
+    │
+    └── llm/                   # (legacy, prefer biblio)
 ```
 
 ---
@@ -212,33 +316,9 @@ kb-framework/
 
 ---
 
-## Troubleshooting
+## Library Structure
 
-### "ChromaDB slow on first start"
-```bash
-python3 kb/scripts/kb_warmup.py
-```
-
-### "Search finds nothing"
-```bash
-# Run audit
-python3 kb/scripts/kb_full_audit.py
-
-# Ghost Scanner
-python3 kb/scripts/kb_ghost_scanner.py
-```
-
-### "OCR too slow"
-```python
-# Enable GPU in index_pdfs.py:
-GPU_ENABLED = True  # Default: False
-```
-
----
-
-## Library Structure (IMPORTANT)
-
-### content/ - Raw Files
+### `library/content/` - Raw Files
 All non-Markdown files:
 ```
 library/content/
@@ -246,18 +326,18 @@ library/content/
 ├── Medizin_Studien/      # Medical Literature
 ├── Bücher/              # Books, Guides
 ├── Sonstiges/           # Uncategorized
-└── [category]/           # Custom categories possible
+└── [category]/          # Custom categories possible
 ```
 
-### agent/ - Markdown Files
+### `library/agent/` - Markdown Files
 All .md files for agents:
 ```
 library/agent/
-├── projektplanung/      # Agent plans
-├── memory/              # Daily logs
-├── Workflow_Referenzen/ # Reusable workflows
-├── agents/             # Agent-specific docs
-└── [category]/        # Custom categories possible
+├── projektplanung/       # Agent plans
+├── memory/               # Daily logs
+├── Workflow_Referenzen/  # Reusable workflows
+├── agents/              # Agent-specific docs
+└── [category]/         # Custom categories possible
 ```
 
 ### Integrating New Files
@@ -274,6 +354,244 @@ library/agent/projektplanung/Treechat_Upgrade.md
 
 # New learning
 library/agent/learnings/2026-04-12_Git_Workflow.md
+```
+
+---
+
+## Workflows
+
+### Basic Search Workflow
+
+```bash
+# 1. Index content
+kb index ./library/content/Gesundheit/
+
+# 2. Search
+kb search "Vitamin D Mangel"
+
+# 3. Verify with audit
+kb audit
+```
+
+### LLM Essence Generation
+
+```bash
+# 1. Check status
+kb llm engine status
+
+# 2. Generate essence
+kb llm generate essence "Vitamin D"
+
+# 3. Or via Python API
+python3 -c "
+from kb.biblio.engine.registry import EngineRegistry
+registry = EngineRegistry.get_instance()
+print(registry.primary_provider)
+"
+```
+
+### Sync & Audit Cycle
+
+```bash
+# Sync ChromaDB with SQLite
+kb sync --stats
+
+# Find orphaned entries
+kb ghost
+
+# Full integrity audit
+kb audit -v --csv audit_results.csv
+```
+
+---
+
+## API Reference
+
+### KBConfig (`kb/base/config.py`)
+
+```python
+from kb.base.config import KBConfig
+
+config = KBConfig.get_instance()
+
+# Properties
+config.base_path        # Path: ~/.openclaw/kb
+config.db_path          # Path: ~/.openclaw/kb/knowledge.db
+config.library_path     # Path: ~/.openclaw/kb/library
+config.chroma_path      # Path: ~/.openclaw/kb/chroma_db
+
+# Methods
+config.validate()        # Validate paths exist
+config.reload()         # Force reload from env
+KBConfig.reset()        # Reset singleton (for tests)
+```
+
+### LLMConfig (`kb/biblio/config.py`)
+
+```python
+from kb.biblio.config import LLMConfig
+
+config = LLMConfig.get_instance()
+
+# Properties
+config.model_source     # str: ollama, huggingface, auto, compare
+config.model            # str: Full model identifier
+config.hf_model_name    # str: HuggingFace model name
+config.ollama_model      # str: Ollama model name
+config.parallel_mode    # bool
+config.parallel_strategy # str: primary_first, aggregate, compare
+
+# Methods
+config.reload(model_source=...)  # Reload with new config
+config.to_dict()                # Serialize to dict
+```
+
+### EngineRegistry (`kb/biblio/engine/registry.py`)
+
+```python
+from kb.biblio.engine.registry import EngineRegistry
+
+registry = EngineRegistry.get_instance()
+
+# Properties
+registry.primary_provider   # str: Current primary engine
+registry.secondary_provider # str: Current secondary engine
+
+# Methods
+registry.get_primary()           # Get primary engine instance
+registry.get_secondary()         # Get secondary engine instance
+registry.get_both()              # (primary, secondary)
+registry.is_engine_available(src)  # Check availability
+registry.reset()                 # Reset singleton
+```
+
+### HybridSearch (`kb/framework/hybrid_search/`)
+
+```python
+from kb.framework import HybridSearch
+
+search = HybridSearch()
+
+# Search returns context pointers with line numbers
+results = search.search("query", limit=10)
+
+for r in results:
+    print(f"{r.file_path}:{r.line_number} [{r.score}]")
+    print(f"  → {r.content_preview[:80]}...")
+```
+
+### ObsidianVault (`kb/obsidian/vault.py`)
+
+```python
+from kb.obsidian import ObsidianVault
+
+vault = ObsidianVault("/path/to/vault")
+vault.index()
+
+# Find backlinks
+backlinks = vault.find_backlinks("Notes/Meeting.md")
+
+# Search vault
+results = vault.search("Project X")
+
+# Full-text search
+results = vault.search("keyword")
+```
+
+---
+
+## Troubleshooting
+
+### "ChromaDB slow on first start"
+```bash
+python3 ~/.openclaw/kb/kb/scripts/kb_warmup.py
+# or
+kb warmup
+```
+
+### "Search finds nothing"
+```bash
+# Run audit
+kb audit -v
+
+# Ghost Scanner (find orphaned entries)
+kb ghost
+
+# Check sync status
+kb sync --stats
+```
+
+### "OCR too slow"
+```python
+# Enable GPU in index_pdfs.py:
+GPU_ENABLED = True  # Default: False
+```
+
+### "LLM engine not responding"
+```bash
+# Check engine status
+kb llm engine status
+
+# Test both engines
+kb llm engine test
+
+# Switch engine if needed
+kb llm engine switch ollama
+```
+
+### "Database locked"
+```bash
+# Check for running processes
+ps aux | grep kb
+
+# Restart if needed
+pkill -f "kb.*"
+```
+
+### "Config not found"
+```python
+# Set environment variable
+export KB_BASE_PATH=~/.openclaw/kb
+
+# Or programmatically
+from kb.base.config import KBConfig
+config = KBConfig.reload(base_path="/path/to/kb")
+```
+
+---
+
+## Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| ImportError: kb.base.config not found | Wrong base_path | Set `KB_BASE_PATH=~/.openclaw/kb` |
+| ChromaDB timeout | Model not warmed up | Run `kb warmup` first |
+| No search results | Empty index or sync needed | `kb sync` then `kb audit` |
+| Ghost entries found | Files moved/deleted | `kb sync --delete-orphans` |
+| LLM timeout | Model loading slow | Use `kb llm engine test` to verify |
+| Engine switch failed | Model not available | Check `kb llm engine status` |
+
+---
+
+## Module Hierarchy
+
+```python
+# Core config & database
+from kb.base.config import KBConfig
+from kb.base.db import KBConnection
+from kb.base.logger import KBLogger
+
+# Search framework
+from kb.framework import HybridSearch, ChromaIntegration
+
+# Obsidian integration
+from kb.obsidian import ObsidianVault
+from kb.obsidian.parser import extract_wikilinks, extract_tags
+
+# LLM integration
+from kb.biblio.config import LLMConfig
+from kb.biblio.engine.registry import EngineRegistry
+from kb.biblio.engine.factory import create_engine
 ```
 
 ---

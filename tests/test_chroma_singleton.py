@@ -25,9 +25,9 @@ from pathlib import Path
 # Add project root to path
 _project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(_project_root))
-sys.path.insert(0, str(_project_root / "src"))
+sys.path.insert(0, str(_project_root))
 
-from src.library.chroma_integration import (
+from kb.framework.chroma_integration import (
     ChromaIntegration,
     ChromaIntegrationV2,
     get_chroma,

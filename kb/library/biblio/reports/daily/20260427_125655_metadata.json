@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "title": "Report One",
+  "report_type": "daily",
+  "generated_at": "2026-04-27T12:56:55.547339+00:00",
+  "query": "Query 1",
+  "model": "gemma4:e2b",
+  "sources": []
+}

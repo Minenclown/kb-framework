@@ -16,7 +16,7 @@ import json
 # Add kb to path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "kb"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "kb" / "library" / "knowledge_base"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "kb" / "framework"))
 
 from kb.indexer import BiblioIndexer, MarkdownIndexer, IndexingPlugin
 

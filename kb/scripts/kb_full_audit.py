@@ -14,11 +14,22 @@ import csv
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import DB_PATH
+try:
+    from kb.framework.paths import get_default_db_path
+    DB_PATH = str(get_default_db_path())
+except ImportError:
+    from config import DB_PATH
 
-# Konfiguration
-LIBRARY_PATH = Path.home() / "knowledge" / "library"
-OUTPUT_DIR = Path.home() / "knowledge" / "library" / "audit"
+# Konfiguration - use KBConfig for portable paths
+try:
+    from kb.base.config import KBConfig
+    _cfg = KBConfig.get_instance()
+    LIBRARY_PATH = _cfg.library_path
+    OUTPUT_DIR = _cfg.library_path / "audit"
+except ImportError:
+    from kb.framework.paths import get_default_library_path
+    LIBRARY_PATH = get_default_library_path()
+    OUTPUT_DIR = LIBRARY_PATH / "audit"
 OUTPUT_ORPHANED = OUTPUT_DIR / "orphaned_entries.csv"
 OUTPUT_PATHS = OUTPUT_DIR / "path_check.csv"
 OUTPUT_REPORT = OUTPUT_DIR / "audit_report.md"
@@ -214,7 +225,7 @@ def check_chroma_sqlite_sync(conn, chroma_path):
     """Vergleicht ChromaDB mit SQLite."""
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from library.knowledge_base.chroma_integration import get_chroma
+    from kb.framework.chroma_integration import get_chroma
     
     try:
         chroma = get_chroma(chroma_path=chroma_path)

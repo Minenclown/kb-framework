@@ -10,8 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'kb'))
 
 from indexer import BiblioIndexer
-from kb.knowledge_base.chroma_integration import ChromaIntegration
-from config import CHROMA_PATH, DB_PATH
+from kb.framework.chroma_integration import ChromaIntegration
+from kb.framework.paths import get_default_db_path, get_default_chroma_path
 
 
 class TestEmbeddings:
@@ -51,16 +51,15 @@ class TestConfig:
     
     def test_config_paths_exist(self):
         """Test that config paths are defined."""
-        assert CHROMA_PATH is not None
-        assert DB_PATH is not None
+        assert get_default_chroma_path() is not None
+        assert get_default_db_path() is not None
         print("✅ config paths defined")
     
-    def test_registry_exists(self):
-        """Test that __registry__ exists."""
-        from config import __registry__
-        assert 'name' in __registry__
-        assert __registry__['name'] == 'kb-framework'
-        print("✅ registry metadata exists")
+    def test_paths_are_paths(self):
+        """Test that config paths are Path objects."""
+        assert isinstance(get_default_chroma_path(), Path)
+        assert isinstance(get_default_db_path(), Path)
+        print("✅ config paths are Path objects")
 
 
 class TestMigration:
@@ -92,7 +91,7 @@ def run_all_tests():
     print("\n--- Config Tests ---")
     test_cfg = TestConfig()
     test_cfg.test_config_paths_exist()
-    test_cfg.test_registry_exists()
+    test_cfg.test_paths_are_paths()
     
     # Run migration tests
     print("\n--- Migration Tests ---")

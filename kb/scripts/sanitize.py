@@ -76,7 +76,7 @@ def sanitize_filename(filename: str) -> str:
         return "unnamed"
     
     # Remove any path components
-    filename = os.path.basename(filename)
+    filename = Path(filename).name
     
     # Only allow safe characters
     safe_chars = re.compile(r'[^a-zA-Z0-9._-]')
@@ -84,8 +84,9 @@ def sanitize_filename(filename: str) -> str:
     
     # Limit length
     if len(sanitized) > 255:
-        name, ext = os.path.splitext(sanitized)
-        sanitized = name[:250] + ext
+        stem = Path(sanitized).stem
+        ext = Path(sanitized).suffix
+        sanitized = stem[:250] + ext
     
     return sanitized or "unnamed"
 
@@ -160,17 +161,17 @@ if __name__ == "__main__":
     
     # Test path sanitization
     test_paths = [
-        "/home/user/file.txt",
+        str(Path.home() / "file.txt"),
         "relative/path/file.md",
         "../../../etc/passwd",
-        "/home/user/../../../etc/passwd",
+        str(Path.home() / "../../../etc/passwd"),
         "file\x00.txt",
     ]
     
     print("\nPath Sanitization Tests:")
     for path in test_paths:
         try:
-            result = sanitize_path(path, base_dir="/home/user")
+            result = sanitize_path(path, base_dir=str(Path.home()))
             print(f"  ✅ {path} -> {result}")
         except ValueError as e:
             print(f"  ❌ {path} -> {e}")

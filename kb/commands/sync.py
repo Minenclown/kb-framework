@@ -20,8 +20,8 @@ from typing import List, Set, Dict, Any, Optional
 from kb.base.command import BaseCommand
 from kb.base.db import KBConnection, KBConnectionError
 from kb.commands import register_command
-from src.library.chroma_integration import get_chroma, embed_batch
-from src.library.batching import batched, BatchProgress, batched_chroma_upsert, batched_chroma_delete
+from kb.framework.chroma_integration import get_chroma, embed_batch
+from kb.framework.batching import batched, BatchProgress, batched_chroma_upsert, batched_chroma_delete
 
 
 @register_command

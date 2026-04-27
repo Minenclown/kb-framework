@@ -79,7 +79,7 @@ file_hash = md5(file.read_bytes())
 
 ```python
 # Lazy Loading beim ersten Zugriff
-from kb.library.knowledge_base import ChromaIntegration
+from kb.framework import ChromaIntegration
 chroma = ChromaIntegration()
 collection = chroma.sections_collection  # "kb_sections"
 ```
@@ -358,7 +358,7 @@ kb llm engine test
 ### 5.1 Hybrid Search
 
 ```python
-from kb.library.knowledge_base import HybridSearch
+from kb.framework import HybridSearch
 from kb.base.config import KBConfig
 
 config = KBConfig()
@@ -391,7 +391,7 @@ with indexer:
 ### 5.3 ChromaDB Direct Access
 
 ```python
-from kb.library.knowledge_base import ChromaIntegration
+from kb.framework import ChromaIntegration
 
 chroma = ChromaIntegration()
 collection = chroma.sections_collection

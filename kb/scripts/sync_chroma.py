@@ -11,9 +11,9 @@ from typing import Dict, Set, Tuple
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kb.base.config import KBConfig
-from kb.knowledge_base.chroma_integration import get_chroma
-from kb.knowledge_base.embedding_pipeline import EmbeddingPipeline
-from src.library.batching import batched_chroma_delete
+from kb.framework.chroma_integration import get_chroma
+from kb.framework.embedding_pipeline import EmbeddingPipeline
+from kb.framework.batching import batched_chroma_delete
 
 
 def get_sqlite_sections(conn: sqlite3.Connection) -> Dict[str, str]:

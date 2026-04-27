@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "title": "Report Two",
+  "report_type": "weekly",
+  "generated_at": "2026-04-27T12:49:41.174054+00:00",
+  "query": "Query 2",
+  "model": "gemma4:e2b",
+  "sources": []
+}

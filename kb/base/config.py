@@ -28,6 +28,9 @@ class KBConfig:
     Singleton für KB Konfiguration.
     
     Thread-safe implementation mit lazy loading.
+    __new__-based singleton enforcement prevents race conditions
+    after reset() — direct constructor calls always return the
+    shared singleton instead of creating duplicates.
     
     Usage:
         config = KBConfig.get_instance()
@@ -35,26 +38,47 @@ class KBConfig:
         
         # Force reload
         config = KBConfig.reload(base_path="/new/path")
+        
+        # Reset for tests
+        KBConfig.reset()
     """
     
     _instance: Optional['KBConfig'] = None
     _lock = threading.Lock()
     _initialized: bool = False
     
-    DEFAULT_BASE = Path.home() / ".openclaw" / "kb"
+    DEFAULT_BASE = None  # Resolved lazily via paths.py to avoid circular import
+    
+    def __new__(cls, base_path: Optional[Path] = None, skip_validation: bool = False):
+        """Enforce singleton — constructor always returns the shared instance.
+        
+        This prevents race conditions after reset(): if two threads
+        call KBConfig(...) concurrently when _instance is None, both
+        get the same object (only the first triggers __init__).
+        """
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                # Mark as needing __init__ on first creation
+                cls._instance._needs_init = True  # type: ignore[attr-defined]
+            else:
+                # Subsequent constructor calls: skip __init__
+                cls._instance._needs_init = False  # type: ignore[attr-defined]
+        return cls._instance
     
     def __init__(self, base_path: Optional[Path] = None, skip_validation: bool = False):
-        if KBConfig._instance is not None:
-            raise KBConfigError("Use KBConfig.get_instance() instead of constructor")
+        # Guard: only init on first construction (or after reset)
+        if not getattr(self, '_needs_init', False):
+            return
         
         self._base_path = self._resolve_base_path(base_path)
         self._env_overrides: Dict[str, str] = {}
         self._validated = False
+        self._needs_init = False
         
         if not skip_validation:
             self._validate()
         
-        KBConfig._instance = self
         KBConfig._initialized = True
     
     @staticmethod
@@ -67,7 +91,13 @@ class KBConfig:
         if env_base:
             return Path(env_base).resolve()
         
-        return KBConfig.DEFAULT_BASE.resolve()
+        # Package-relative fallback: if kb/library/ exists relative to this package
+        package_root = Path(__file__).resolve().parent.parent  # kb/base/ -> kb/
+        if (package_root / "library").exists():
+            return package_root
+        
+        # OpenClaw-managed installation default
+        return Path.home() / ".openclaw" / "kb"
     
     def _validate(self) -> None:
         """Validate configuration paths. Fails fast on critical issues."""
@@ -95,17 +125,19 @@ class KBConfig:
         """
         with cls._lock:
             if cls._instance is None:
-                cls._instance = cls(base_path)
+                cls._instance = super().__new__(cls)
+                cls._instance._needs_init = True  # type: ignore[attr-defined]
+                cls._instance.__init__(base_path)
             elif base_path is not None:
                 # If a different base_path is requested, reload under lock
                 existing = cls._instance._base_path.resolve()
                 requested = Path(base_path).resolve()
                 if existing != requested:
                     old_instance = cls._instance
-                    cls._instance = None
-                    cls._initialized = False
+                    cls._instance = super().__new__(cls)
+                    cls._instance._needs_init = True  # type: ignore[attr-defined]
                     try:
-                        cls._instance = cls(base_path)
+                        cls._instance.__init__(base_path)
                     except KBConfigError:
                         # Restore on failure — don't leave singleton in broken state
                         cls._instance = old_instance
@@ -124,7 +156,7 @@ class KBConfig:
     
     @classmethod
     def reset(cls) -> None:
-        """Reset singleton (mainly for testing)."""
+        """Reset singleton (mainly for testing). Thread-safe."""
         with cls._lock:
             cls._instance = None
             cls._initialized = False
@@ -141,21 +173,21 @@ class KBConfig:
         env = os.getenv("KB_DB_PATH")
         if env:
             return Path(env).resolve()
-        return self._base_path / "knowledge.db"
+        return self._base_path / "library" / "biblio.db"
     
     @property
     def chroma_path(self) -> Path:
         env = os.getenv("KB_CHROMA_PATH")
         if env:
             return Path(env).resolve()
-        return self._base_path / "chroma_db"
+        return self._base_path / "library" / "chroma_db"
     
     @property
     def library_path(self) -> Path:
         env = os.getenv("KB_LIBRARY_PATH")
         if env:
             return Path(env).resolve()
-        return Path.home() / "knowledge" / "library"
+        return self._base_path / "library"
     
     @property
     def library_biblio_path(self) -> Path:
@@ -164,29 +196,29 @@ class KBConfig:
     
     @property
     def knowledge_base_path(self) -> Path:
-        """Path to kb/knowledge_base/ (search engine code path)."""
-        return self._base_path / "knowledge_base"
+        """Path to kb/framework/ (search engine code path)."""
+        return self._base_path / "framework"
     
     @property
     def workspace_path(self) -> Path:
         env = os.getenv("KB_WORKSPACE_PATH")
         if env:
             return Path(env).resolve()
-        return Path.home() / ".openclaw" / "workspace"
+        return self._base_path.parent / "workspace"
     
     @property
     def ghost_cache_path(self) -> Path:
         env = os.getenv("KB_GHOST_CACHE_PATH")
         if env:
             return Path(env).resolve()
-        return Path.home() / ".knowledge" / "ghost_cache.json"
+        return self._base_path / "ghost_cache.json"
     
     @property
     def backup_dir(self) -> Path:
         env = os.getenv("KB_BACKUP_DIR")
         if env:
             return Path(env).resolve()
-        return Path.home() / ".knowledge" / "backup"
+        return self._base_path / "backup"
     
     @property
     def index_roots(self) -> list[str]:

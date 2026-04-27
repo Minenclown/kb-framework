@@ -26,7 +26,11 @@ from pathlib import Path
 # Configuration
 GITHUB_REPO = "Minenclown/kb-framework"
 VERSION_FILE = Path(__file__).parent / "version.py"
-BACKUP_DIR = Path.home() / ".knowledge" / "backup"
+try:
+    from kb.framework.paths import get_default_backup_dir
+    BACKUP_DIR = get_default_backup_dir()
+except ImportError:
+    BACKUP_DIR = Path.home() / ".openclaw" / "kb" / "backup"
 
 # Allowed pattern for GitHub repo names (owner/repo format)
 import re
@@ -89,9 +93,13 @@ def backup_current_installation(kb_path):
         shutil.copy2(config_path, backup_path / "config.py.bak")
     
     # Backup database
-    db_path = Path.home() / ".knowledge" / "knowledge.db"
+    try:
+        from kb.framework.paths import get_default_db_path
+        db_path = get_default_db_path()
+    except ImportError:
+        db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
     if db_path.exists():
-        shutil.copy2(db_path, backup_path / "knowledge.db.bak")
+        shutil.copy2(db_path, backup_path / "biblio.db.bak")
     
     return backup_path
 
@@ -217,7 +225,11 @@ def _validate_script_path(script_path: Path, allowed_parent: Path) -> Path:
 
 def update_database_schema(kb_path):
     """Run any necessary database migrations."""
-    db_path = Path.home() / ".knowledge" / "knowledge.db"
+    try:
+        from kb.framework.paths import get_default_db_path
+        db_path = get_default_db_path()
+    except ImportError:
+        db_path = Path.home() / ".openclaw" / "kb" / "library" / "biblio.db"
     if not db_path.exists():
         return
     

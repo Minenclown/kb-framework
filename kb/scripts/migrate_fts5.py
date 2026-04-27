@@ -19,8 +19,12 @@ import logging
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import DB_PATH
-from kb.knowledge_base.fts5_setup import (
+try:
+    from kb.framework.paths import get_default_db_path
+    DB_PATH = str(get_default_db_path())
+except ImportError:
+    from config import DB_PATH
+from kb.framework.fts5_setup import (
     check_fts5_available,
     setup_fts5,
     rebuild_fts5_index,

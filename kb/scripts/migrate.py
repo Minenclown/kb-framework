@@ -7,7 +7,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import DB_PATH
+try:
+    from kb.framework.paths import get_default_db_path
+    DB_PATH = str(get_default_db_path())
+except ImportError:
+    from config import DB_PATH
 
 
 def get_db_version(conn):
