@@ -36,7 +36,7 @@ from typing import Optional
 from contextlib import contextmanager
 
 # Import config - lazy initialization to avoid module-level side effects
-from .paths import get_default_chroma_path
+from .paths import get_default_base_path, get_default_chroma_path
 from .exceptions import DatabaseError
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 def _validate_chroma_path(path: Path) -> Path:
     """Validate chroma path is within allowed KB directory."""
-    base = Path.home() / ".openclaw" / "kb"
+    base = get_default_base_path()
     try:
         path.resolve().relative_to(base.resolve())
     except ValueError:

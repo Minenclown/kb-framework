@@ -323,9 +323,21 @@ class LLMCommand(BaseCommand):
 
         try:
             return handler()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             self.get_logger().warning("Interrupted by user")
             return 130
+        except (TimeoutError, ConnectionError, OSError) as e:
+            self.get_logger().error(f"Network error in LLM command: {e}")
+            if self.get_logger().isEnabledFor(10):  # DEBUG
+                import traceback
+                traceback.print_exc()
+            return self.EXIT_EXECUTION_ERROR
+        except (ValueError, TypeError) as e:
+            self.get_logger().error(f"Invalid input in LLM command: {e}")
+            if self.get_logger().isEnabledFor(10):
+                import traceback
+                traceback.print_exc()
+            return self.EXIT_EXECUTION_ERROR
         except Exception as e:
             self.get_logger().error(f"LLM command failed: {e}")
             if self.get_logger().isEnabledFor(10):  # DEBUG
@@ -375,14 +387,15 @@ class LLMCommand(BaseCommand):
                 print(f"     Provider:   {secondary.get('provider', '?')}")
                 print(f"     Model:      {secondary.get('model', '?')}")
                 print(f"     Available:  {avail}  {secondary.get('available', False)}")
-        except Exception as e:
+        except (ImportError, RuntimeError, OSError) as e:
             log.debug(f"EngineRegistry status failed: {e}")
             # Fallback: Einzelne Engines prüfen
             ollama_ok = False
             try:
                 from kb.biblio.engine.ollama_engine import OllamaEngine
                 ollama_ok = OllamaEngine.get_instance(config).is_available()
-            except Exception:
+            except (ImportError, OSError) as ex:
+                log.debug(f"Ollama check failed: {ex}")
                 pass
             icon = "✅" if ollama_ok else "❌"
             print(f"\n  {icon}  Modell:    {config.model}")
@@ -400,7 +413,7 @@ class LLMCommand(BaseCommand):
             print(f"     Jobs:      {stats.get('registered_jobs', 0)} registriert")
             print(f"     Läufe:     {stats.get('total_runs', 0)} "
                   f"(✅ {stats.get('success_count', 0)} ❌ {stats.get('failure_count', 0)})")
-        except Exception:
+        except (ImportError, RuntimeError, OSError):
             print(f"\n  ⚠️  Scheduler: nicht verfügbar")
 
         # Letzte Essenzen
@@ -409,7 +422,7 @@ class LLMCommand(BaseCommand):
             manager = LLMContentManager()
             essences = _run_async(manager.list_essences(limit=3))
             reports = _run_async(manager.list_reports(limit=3))
-        except Exception as e:
+        except (ValueError, TypeError, ImportError) as e:
             log.debug(f"Content manager query failed: {e}")
             essences, reports = [], []
 
@@ -523,7 +536,7 @@ class LLMCommand(BaseCommand):
 
             print(f"\n  Has Secondary: {registry.has_secondary}")
 
-        except Exception as e:
+        except (ValueError, TypeError, ImportError) as e:
             print(f"\n  ⚠️  EngineRegistry Fehler: {e}")
             # Einzelne Engines prüfen
             for source, name, url in [
@@ -536,7 +549,7 @@ class LLMCommand(BaseCommand):
                     avail = er.is_engine_available(source)
                     icon = "✅" if avail else "❌"
                     print(f"  {icon}  {name}: {url}  (available={avail})")
-                except Exception:
+                except (ImportError, RuntimeError, OSError):
                     print(f"  ❌  {name}: nicht verfügbar")
 
         # Config-Übersicht
@@ -568,7 +581,7 @@ class LLMCommand(BaseCommand):
         try:
             EngineRegistry.reset()
             print("     Registry zurückgesetzt ✓")
-        except Exception as e:
+        except (ImportError, RuntimeError, OSError) as e:
             log.warning(f"EngineRegistry.reset() fehlgeschlagen: {e}")
             print(f"     ⚠️  Registry-Reset fehlgeschlagen: {e}")
 
@@ -576,13 +589,13 @@ class LLMCommand(BaseCommand):
         try:
             LLMConfig.reload(model_source=source)
             print(f"     Neu: {LLMConfig.get_instance().model_source}")
-        except Exception as e:
+        except (ValueError, ImportError, RuntimeError) as e:
             log.error(f"Config-Reload fehlgeschlagen: {e}")
             # Versuche Rollback
             try:
                 LLMConfig.reload(model_source=old_source)
                 print(f"     ❌  Switch fehlgeschlagen, zurück auf {old_source}")
-            except Exception:
+            except (ValueError, ImportError, RuntimeError):
                 pass
             return self.EXIT_EXECUTION_ERROR
 
@@ -645,11 +658,11 @@ class LLMCommand(BaseCommand):
                     print(f"❌")
                     print(f"     Fehler:  {response.error}")
                     results.append(("primary", False, response.error))
-            except Exception as e:
+            except (ValueError, TypeError, ImportError) as e:
                 print(f"❌")
                 print(f"     Fehler:  {e}")
                 results.append(("primary", False, str(e)))
-        except Exception as e:
+        except (ImportError, RuntimeError, OSError) as e:
             print(f"  ⚠️  Primary Engine nicht verfügbar: {e}")
             results.append(("primary", False, str(e)))
 
@@ -672,13 +685,13 @@ class LLMCommand(BaseCommand):
                         print(f"❌")
                         print(f"     Fehler:  {response.error}")
                         results.append(("secondary", False, response.error))
-                except Exception as e:
+                except (ValueError, TypeError, ImportError) as e:
                     print(f"❌")
                     print(f"     Fehler:  {e}")
                     results.append(("secondary", False, str(e)))
             else:
                 print(f"  ℹ️  Keine Secondary Engine konfiguriert")
-        except Exception as e:
+        except (ImportError, RuntimeError, OSError) as e:
             print(f"  ℹ️  Secondary Engine nicht konfiguriert: {e}")
 
         # Zusammenfassung
