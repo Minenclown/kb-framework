@@ -1,21 +1,31 @@
 # Changelog
 
-## [1.1.2] - 2026-04-27
+## [1.2.0] - 2026-04-27
 
-### Documentation Updates
+### Fixed
+- **Phase A Path Bugs:** Fixed hardcoded `Path.home()` in `kb/update.py` (3 locations), `kb/__main__.py`, and `kb/config.py` — now use central `paths.py` API
+- **CLI Crash:** Fixed `_SubParsersAction` issue in `kb/commands/llm.py` that caused complete CLI crash on `kb llm generate`
+- **Performance - fetchall():** Changed `fetchall()` to `fetchmany(1000)` batch processing in `indexer.py` and `sync.py` to prevent memory extrusion on large databases
+- **Performance - COUNT Query:** Optimized `_sync_stats()` to use single aggregated COUNT query instead of loading all content_full rows
+- **Performance - ChromaDB Batching:** Added batch processing for ChromaDB ID retrieval with `peek(limit=batch_size)` loop
+- **Link Graph Inversion:** Fixed inverted source/target logic in `kb/obsidian/indexer.py` line 225-233
+- **SQL Injection Protection:** Fixed `isalnum()` check that rejected valid negative PRAGMA values like `-64000` in `kb/base/db.py`
+- **add_wikilink Duplication:** Fixed incomplete duplication check that missed `[[target|alias]]` variants in `kb/obsidian/writer.py`
+- **Silent DB Failure:** Changed `sync_manager.py` to re-raise exceptions instead of returning empty list on DB errors
+- **Test Exception Handling:** Extended `test_indexer.py` exception catch to include `AttributeError`
 
-- **SKILL.md complete rewrite**:
-  - Fixed all incorrect paths (`/opt/kb/` → `~/.openclaw/kb/`, `bin/` → `kb/scripts/`, `config/kb.py` → `kb/base/config.py`)
-  - Added Workflows section
-  - Added API Reference section
-  - Added Troubleshooting section
-  - Added Common Issues table
-  - Updated Architecture diagram with correct paths
-  - Verified all paths against actual file structure
+### Changed
+- **Refactored keyword.py:** Split long functions into sub-methods for better maintainability
+- **Refactored llm.py:** Split long functions into sub-methods for better maintainability
+- **requirements.txt:** Added upper bounds for major versions (`chromadb<1.0`, etc.) to prevent breaking changes
 
-- **README.md updated**:
-  - Added `**Last Updated:** 2026-04-27`
-  - Updated emojis for consistency
+### Security
+- **Path Traversal:** Improved validation in `update.py` path security checks
+- **Exception Handling:** Replaced bare `except Exception:` with specific exception handling where critical
+
+### Documentation
+- **README.md:** Updated version badge from 1.1.1 → 1.2.0 and added missing 1.2.0 features (EngineRegistry, TransformersEngine, Compare Mode)
+- **SKILL.md:** Updated version from 1.1.1 → 1.2.0
 
 ## [1.1.1] - 2026-04-16
 

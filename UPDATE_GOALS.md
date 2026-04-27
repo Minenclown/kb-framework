@@ -1,7 +1,7 @@
 # KB Framework Roadmap
 
-**Version:** 1.1.0  
-**Last Updated:** 2026-04-15
+**Version:** 1.2.0  
+**Last Updated:** 2026-04-27
 
 ---
 
@@ -17,7 +17,19 @@ This document outlines the strategic direction and planned enhancements for the 
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| **Complete Code Review** | Full 10-phase review (context, functions, architecture, connections, optimizations, hardcoded paths, performance, security, tests, documentation) | ✅ Done |
+| **Bug Fixes Round 1-3** | 33 bugs found and fixed, 3 false positives identified | ✅ Done |
+| **Meta-Review Workflow** | Review + self-validation tested (20% false positive rate) | ✅ Done |
+| **Performance Optimizations** | fetchall() → fetchmany(1000), COUNT queries, ChromaDB batching | ✅ Done |
+| **Security Improvements** | Exception handling, SQL injection protection, path traversal | ✅ Done |
+| **Documentation Sync** | README.md, SKILL.md, CHANGELOG.md updated to 1.2.0 | ✅ Done |
 | **Hybrid Search Module** | Re-integration of combined keyword + semantic search capabilities | ✅ Done |
+| **ChromaDB Warmup** | Model preloading to eliminate cold-start latency | ✅ Done |
+| **Delta Indexing** | Incremental re-indexing based on file modification timestamps | ✅ Done |
+| **SearchCommand CLI** | Unified search command with filters (semantic/keyword/fts5) | ✅ Done |
+| **FTS5 Integration** | SQLite Full-Text Search for keyword fallback | ✅ Done |
+| **Reranker Module** | Cross-encoder reranking for search results | ✅ Done |
+| **ChromaPlugin** | ChromaDB collection management and persistence | ✅ Done |
 
 ### High
 
