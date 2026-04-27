@@ -198,8 +198,8 @@ class LLMCommand(BaseCommand):
     def _add_status_parser(self, sub):
         sub.add_parser("status", help="LLM-Status: Modell, Jobs, letzte Essenzen")
 
-    def _add_generate_parsers(self, gen):
-        gen_sub = gen.add_subparsers(dest="generate_what", help="Was generieren?")
+    def _add_generate_parsers(self, parser: argparse.ArgumentParser):
+        gen_sub = parser.add_subparsers(dest="generate_what", help="Was generieren?")
         self._add_essence_parser(gen_sub)
         self._add_report_parser(gen_sub)
 

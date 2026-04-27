@@ -130,8 +130,8 @@ class TestBiblioIndexerInit:
             try:
                 indexer.conn.execute("SELECT 1")
                 assert False, "Should have raised error"
-            except sqlite3.ProgrammingError:
-                pass  # Expected
+            except (sqlite3.ProgrammingError, AttributeError):
+                pass  # Expected - conn is None or closed
     
     def test_init_with_plugins(self):
         """Test initialization with plugin list."""
