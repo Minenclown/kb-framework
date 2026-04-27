@@ -1,6 +1,6 @@
 # KB Framework – Deterministic Context Mapping
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -33,6 +33,13 @@ Every search returns **pointers**, not paragraphs. The agent can cite, verify, a
 - **Hybrid Search** – Combined 60% semantic + 40% keyword search
 - **PDF Indexing** – Automatic PDF document indexing with OCR support
 - **Obsidian Vault Support** – WikiLinks, Tags, Frontmatter, Embeds, Backlinks
+
+### 🆕 Version 1.2.0 Features
+- **EngineRegistry** – Multi-Engine LLM Support (Ollama + HuggingFace)
+- **TransformersEngine** – Local HuggingFace Transformers
+- **Compare Mode** – Side-by-Side Engine Comparison
+- **Parallel Support** – Parallel Report Generation
+- **Config Switch** – Runtime Engine Switching
 
 ### 🔗 Obsidian Integration
 - Parse WikiLinks, Tags, Frontmatter, Embeds

@@ -1,6 +1,6 @@
 # KB Framework - OpenClaw Skill
 
-**Version:** 1.1.1  
+**Version:** 1.2.0  
 **Category:** Knowledge Base / Search  
 **Requires:** Python 3.9+, SQLite, ChromaDB  
 **Location:** `~/.openclaw/kb/`
