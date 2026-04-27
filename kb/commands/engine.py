@@ -42,8 +42,9 @@ class EngineListCommand(BaseCommand):
                 engine = create_engine(llm_config) if llm_config.model_source == name else None
                 if engine:
                     available = engine.is_available()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Engine check failed: {e}")
+                availability = False
             status = "✅ Available" if available else "❌ Not available"
 
             print(f"\n{name}")
@@ -107,8 +108,9 @@ class EngineInfoCommand(BaseCommand):
                 alt_config = LLMConfig(model_source=engine_name, skip_validation=True)
                 engine = create_engine(alt_config)
                 available = engine.is_available()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Engine check failed: {e}")
+            availability = False
         print(f"\nAvailable: {'Yes' if available else 'No'}")
 
         if not available:

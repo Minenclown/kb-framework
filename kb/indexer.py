@@ -359,7 +359,13 @@ class BiblioIndexer:
 
     def close(self):
         """Close database connection."""
-        self.conn.close()
+        if self.conn:
+            try:
+                self.conn.close()
+            except sqlite3.Error:
+                pass
+            finally:
+                self.conn = None
 
     def _get_or_create_keyword(self, keyword: str) -> Optional[str]:
         """Get or create keyword entry."""

@@ -158,6 +158,11 @@ def download_and_install(release_info, kb_path, scripts_path):
     # Replace kb/ directory
     print("🔄 Updating files...")
     if kb_path.exists():
+        # Validate before deletion
+        kb_path = Path(kb_path).resolve()
+        expected_base = Path.home() / ".openclaw" / "kb"
+        if not str(kb_path).startswith(str(expected_base)):
+            raise ValueError(f"Refusing to delete {kb_path}: outside expected directory")
         shutil.rmtree(kb_path)
     
     new_kb = source_path / "kb"
@@ -167,6 +172,11 @@ def download_and_install(release_info, kb_path, scripts_path):
     # Update scripts
     new_scripts = source_path / "scripts"
     if new_scripts.exists() and scripts_path.exists():
+        # Validate before deletion
+        scripts_path = Path(scripts_path).resolve()
+        expected_base = Path.home() / ".openclaw" / "kb"
+        if not str(scripts_path).startswith(str(expected_base)):
+            raise ValueError(f"Refusing to delete {scripts_path}: outside expected directory")
         shutil.rmtree(scripts_path)
         shutil.copytree(new_scripts, scripts_path)
     
@@ -177,6 +187,10 @@ def download_and_install(release_info, kb_path, scripts_path):
     VERSION_FILE.write_text(f'VERSION = "{release_info["version"]}"\n')
     
     # Cleanup
+    temp_dir = Path(temp_dir).resolve()
+    expected_base = Path.home() / ".openclaw" / "kb"
+    if not str(temp_dir).startswith(str(expected_base)):
+        raise ValueError(f"Refusing to delete {temp_dir}: outside expected directory")
     shutil.rmtree(temp_dir)
     
     return True

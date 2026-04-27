@@ -143,7 +143,10 @@ class SearchCommand(BaseCommand):
                 traceback.print_exc()
             return self.EXIT_EXECUTION_ERROR
         finally:
-            searcher.close()
+            try:
+                searcher.close()
+            except Exception:
+                pass  # Don't mask original error
 
         # Output results
         if not results:

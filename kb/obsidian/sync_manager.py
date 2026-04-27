@@ -319,19 +319,32 @@ class SyncManager:
     # Internal: KB Database Access
     # ------------------------------------------------------------------
 
+    def _validate_kb_schema(self) -> bool:
+        """Validate KB database has required schema."""
+        with sqlite3.connect(str(self.kb_path)) as conn:
+            cursor = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='entries'"
+            )
+            if not cursor.fetchone():
+                return False
+            cursor = conn.execute("PRAGMA table_info(entries)")
+            columns = {row[1] for row in cursor.fetchall()}
+            required = {'id', 'title', 'authors', 'year', 'tags', 'content'}
+            return required.issubset(columns)
+
     def _get_kb_entry(self, entry_id: int) -> Optional[dict]:
         """Read a single entry from the KB database."""
         import sqlite3
 
         try:
-            conn = sqlite3.connect(str(self.kb_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                "SELECT * FROM entries WHERE id = ?",
-                (entry_id,),
-            )
-            row = cursor.fetchone()
-            conn.close()
+            with sqlite3.connect(str(self.kb_path)) as conn:
+                conn.execute("PRAGMA foreign_keys=ON")
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute(
+                    "SELECT * FROM entries WHERE id = ?",
+                    (entry_id,),
+                )
+                row = cursor.fetchone()
 
             if row:
                 return dict(row)
@@ -345,11 +358,11 @@ class SyncManager:
         import sqlite3
 
         try:
-            conn = sqlite3.connect(str(self.kb_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute("SELECT * FROM entries")
-            rows = [dict(r) for r in cursor.fetchall()]
-            conn.close()
+            with sqlite3.connect(str(self.kb_path)) as conn:
+                conn.execute("PRAGMA foreign_keys=ON")
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("SELECT * FROM entries")
+                rows = [dict(r) for r in cursor.fetchall()]
             return rows
         except Exception as e:
             logger.warning(f"KB read error: {e}")
@@ -363,14 +376,14 @@ class SyncManager:
         import sqlite3
 
         try:
-            conn = sqlite3.connect(str(self.kb_path))
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                "SELECT * FROM entries WHERE LOWER(title) = LOWER(?)",
-                (title,),
-            )
-            row = cursor.fetchone()
-            conn.close()
+            with sqlite3.connect(str(self.kb_path)) as conn:
+                conn.execute("PRAGMA foreign_keys=ON")
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute(
+                    "SELECT * FROM entries WHERE LOWER(title) = LOWER(?)",
+                    (title,),
+                )
+                row = cursor.fetchone()
 
             if row:
                 return dict(row)
@@ -400,26 +413,26 @@ class SyncManager:
         modified = entry_data.get("modified", datetime.now().isoformat())
 
         try:
-            conn = sqlite3.connect(str(self.kb_path))
+            with sqlite3.connect(str(self.kb_path)) as conn:
+                conn.execute("PRAGMA foreign_keys=ON")
 
-            if entry_id:
-                conn.execute(
-                    """UPDATE entries SET
-                       title=?, authors=?, year=?, tags=?, abstract=?,
-                       content=?, modified=?
-                       WHERE id=?""",
-                    (title, authors, year, tags, abstract, content, modified, entry_id),
-                )
-            else:
-                cursor = conn.execute(
-                    """INSERT INTO entries (title, authors, year, tags, abstract, content, modified)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (title, authors, year, tags, abstract, content, modified),
-                )
-                entry_id = cursor.lastrowid
+                if entry_id:
+                    conn.execute(
+                        """UPDATE entries SET
+                           title=?, authors=?, year=?, tags=?, abstract=?,
+                           content=?, modified=?
+                           WHERE id=?""",
+                        (title, authors, year, tags, abstract, content, modified, entry_id),
+                    )
+                else:
+                    cursor = conn.execute(
+                        """INSERT INTO entries (title, authors, year, tags, abstract, content, modified)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (title, authors, year, tags, abstract, content, modified),
+                    )
+                    entry_id = cursor.lastrowid
 
-            conn.commit()
-            conn.close()
+                conn.commit()
             return entry_id or 0
 
         except Exception as e:
