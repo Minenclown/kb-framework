@@ -112,15 +112,19 @@ class SyncCommand(BaseCommand):
             "WHERE content_full IS NOT NULL AND content_full != ''"
         )
         result = {}
-        for row in cursor.fetchall():
-            section_id = str(row['id'])
-            content = row['content_full'] or ""
-            content_hash = hashlib.md5(content.encode('utf-8')).hexdigest() if content else ""
-            result[section_id] = {
-                'file_id': str(row['file_id']),
-                'file_hash': row['file_hash'] or "",
-                'content_hash': content_hash
-            }
+        while True:
+            rows = cursor.fetchmany(1000)  # Batch von 1000
+            if not rows:
+                break
+            for row in rows:
+                section_id = str(row['id'])
+                content = row['content_full'] or ""
+                content_hash = hashlib.md5(content.encode('utf-8')).hexdigest() if content else ""
+                result[section_id] = {
+                    'file_id': str(row['file_id']),
+                    'file_hash': row['file_hash'] or "",
+                    'content_hash': content_hash
+                }
         return result
     
     def _get_chroma_sections(self) -> Set[str]:
@@ -128,25 +132,50 @@ class SyncCommand(BaseCommand):
         try:
             chroma = get_chroma()
             collection = chroma.client.get_collection(name="kb_sections")
-            results = collection.get(include=[])
-            return set(results['ids'])
+            # Batch-weise abrufen (ChromaDB hat keine direkte count-Methode)
+            results = collection.get(include=['metadatas'], limit=1000)
+            ids = set(results['ids'])
+            # Wenn mehr vorhanden, weiter abrufen
+            while len(results['ids']) == 1000:
+                offset = len(ids)
+                results = collection.get(include=['metadatas'], limit=1000, offset=offset)
+                ids.update(results['ids'])
+            return ids
         except DatabaseError as e:
             self.get_logger().warning(f"ChromaDB read error: {e}")
             return set()
     
     def _sync_stats(self, conn: KBConnection) -> Dict[str, Any]:
         """Get synchronization statistics."""
-        sqlite_data = self._get_sqlite_sections(conn)
-        chroma_sections = self._get_chroma_sections()
+        # Use COUNT queries instead of loading all content
+        cursor = conn.execute(
+            "SELECT COUNT(*) as total, COUNT(DISTINCT file_id) as files FROM file_sections "
+            "WHERE content_full IS NOT NULL AND content_full != ''"
+        )
+        row = cursor.fetchone()
+        sqlite_count = row['total']
+        file_count = row['files']
         
-        sqlite_count = len(sqlite_data)
+        chroma_sections = self._get_chroma_sections()
         chroma_count = len(chroma_sections)
         
-        missing = set(sqlite_data.keys()) - chroma_sections
-        orphans = chroma_sections - set(sqlite_data.keys())
+        # For missing/orphan IDs, we need to compare - use a lighter query
+        if sqlite_count > 0:
+            cursor = conn.execute(
+                "SELECT id FROM file_sections "
+                "WHERE content_full IS NOT NULL AND content_full != '' "
+                "LIMIT 10000"
+            )
+            sqlite_ids = set(str(r['id']) for r in cursor.fetchall())
+        else:
+            sqlite_ids = set()
+        
+        missing = sqlite_ids - chroma_sections
+        orphans = chroma_sections - sqlite_ids
         
         return {
             'sqlite_sections': sqlite_count,
+            'total_files': file_count,
             'chroma_sections': chroma_count,
             'missing_from_chroma': len(missing),
             'orphans_in_chroma': len(orphans),
