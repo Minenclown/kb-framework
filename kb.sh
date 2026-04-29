@@ -6,12 +6,14 @@
 # falls back to system python3 otherwise.
 
 # Find KB installation
-KB_DIR="${KB_DIR:-$HOME/.openclaw/kb}"
+KB_DIR="${KB_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/kb}"
 
 # If not in expected location, try to find it
 if [ ! -d "$KB_DIR" ]; then
     # Check alternative locations
-    if [ -d "$HOME/projects/kb-framework" ]; then
+    if [ -d "$HOME/.local/share/kb" ]; then
+        KB_DIR="$HOME/.local/share/kb"
+    elif [ -d "$HOME/projects/kb-framework" ]; then
         KB_DIR="$HOME/projects/kb-framework"
     elif [ -d "$HOME/kb-framework" ]; then
         KB_DIR="$HOME/kb-framework"

@@ -40,11 +40,11 @@ echo -e "${YELLOW}📦 Installiere EasyOCR (optional, für bildbasierte PDFs)...
 pip install easyocr torch --quiet 2>/dev/null || echo -e "${YELLOW}⚠️  EasyOCR/Torch installation failed (optional)${NC}"
 
 # 3. Directories erstellen
-echo -e "${YELLOW}📦 Erstelle Directories...${NC}"
-mkdir -p ~/.knowledge/chroma_db/
-mkdir -p ~/.knowledge/backup/
-echo -e "${GREEN}✓${NC} ~/.knowledge/chroma_db/ erstellt"
-echo -e "${GREEN}✓${NC} ~/.knowledge/backup/ erstellt"
+KB_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kb"
+mkdir -p "$KB_DATA_DIR/library/chroma_db/"
+mkdir -p "$KB_DATA_DIR/backup/"
+echo -e "${GREEN}✓${NC} $KB_DATA_DIR/library/chroma_db/ erstellt"
+echo -e "${GREEN}✓${NC} $KB_DATA_DIR/backup/ erstellt"
 
 # 4. Config erstellen (falls Template existiert)
 if [ ! -f kb/config.py ] && [ -f kb/config.py.template ]; then
@@ -58,7 +58,7 @@ fi
 
 # 5. OpenClaw workspace integration (optional)
 if [ -d ~/.openclaw/workspace ]; then
-    echo -e "${YELLOW}📦 Kopiere nach ~/.openclaw/workspace/kb-framework/...${NC}"
+    echo -e "${YELLOW}📦 Kopiere nach ~/.openclaw/workspace/kb-framework/ (optional)...${NC}"
     cp -r "$REPO_ROOT" ~/.openclaw/workspace/kb-framework 2>/dev/null || true
     echo -e "${GREEN}✓${NC} Kopiert nach ~/.openclaw/workspace/kb-framework/"
 fi
