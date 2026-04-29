@@ -93,10 +93,14 @@ Environment Variables:
         """
     )
     
+    try:
+        from kb.version import VERSION as _version
+    except ImportError:
+        _version = '1.2.0'
     parser.add_argument(
         '--version',
         action='version',
-        version='%(prog)s 1.1.0'
+        version=f'%(prog)s {_version}'
     )
     
     parser.add_argument(

@@ -56,11 +56,15 @@ else
     echo -e "${YELLOW}⚠️  kb/config.py.template nicht gefunden${NC}"
 fi
 
-# 5. OpenClaw workspace integration (optional)
-if [ -d ~/.openclaw/workspace ]; then
-    echo -e "${YELLOW}📦 Kopiere nach ~/.openclaw/workspace/kb-framework/ (optional)...${NC}"
-    cp -r "$REPO_ROOT" ~/.openclaw/workspace/kb-framework 2>/dev/null || true
-    echo -e "${GREEN}✓${NC} Kopiert nach ~/.openclaw/workspace/kb-framework/"
+# 5. Create symlink in XDG data dir (optional, for easy access)
+KB_XDG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/kb"
+if [ ! -d "$KB_XDG_DIR" ] && [ -d "$REPO_ROOT/library" ]; then
+    echo -e "${YELLOW}📦 Symlinking repo to $KB_XDG_DIR (optional)...${NC}"
+    mkdir -p "$(dirname "$KB_XDG_DIR")"
+    ln -s "$REPO_ROOT" "$KB_XDG_DIR" 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} Symlink erstellt: $KB_XDG_DIR → $REPO_ROOT"
+elif [ -d "$KB_XDG_DIR" ]; then
+    echo -e "${GREEN}✓${NC} $KB_XDG_DIR existiert bereits"
 fi
 
 echo ""
