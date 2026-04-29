@@ -96,8 +96,9 @@ class KBConfig:
         if (package_root / "library").exists():
             return package_root
         
-        # OpenClaw-managed installation default
-        return Path.home() / ".openclaw" / "kb"
+        # XDG-conform default
+        from kb.framework.paths import get_default_base_path
+        return get_default_base_path()
     
     def _validate(self) -> None:
         """Validate configuration paths. Fails fast on critical issues."""

@@ -48,7 +48,8 @@ try:
     from kb.framework.paths import get_default_base_path
     _default_path = str(get_default_base_path())
 except Exception:
-    _default_path = str(Path.home() / ".openclaw" / "kb")
+    from kb.framework.paths import _get_xdg_default_base_path
+    _default_path = str(_get_xdg_default_base_path())
 KB_BASE_PATH = os.getenv("KB_BASE_PATH", _default_path)
 os.environ.setdefault("KB_BASE_PATH", KB_BASE_PATH)
 
@@ -84,7 +85,7 @@ Examples:
   kb llm config
 
 Environment Variables:
-  KB_BASE_PATH       Base directory for KB (default: ~/.openclaw/kb)
+  KB_BASE_PATH       Base directory for KB (default: $XDG_DATA_HOME/kb or ~/.local/share/kb)
   KB_DB_PATH         SQLite database path
   KB_CHROMA_PATH     ChromaDB persistence path
   KB_LIBRARY_PATH    Document library path

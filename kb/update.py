@@ -166,11 +166,12 @@ def download_and_install(release_info, kb_path, scripts_path):
             from kb.framework.paths import get_default_base_path
             expected_base = get_default_base_path()
         except ImportError:
-            expected_base = Path.home() / ".openclaw" / "kb"
+            from kb.framework.paths import _get_xdg_default_base_path
+            expected_base = _get_xdg_default_base_path()
         if not str(kb_path).startswith(str(expected_base)):
             raise ValueError(f"Refusing to delete {kb_path}: outside expected directory")
         shutil.rmtree(kb_path)
-    
+
     new_kb = source_path / "kb"
     if new_kb.exists():
         shutil.copytree(new_kb, kb_path)
@@ -184,7 +185,8 @@ def download_and_install(release_info, kb_path, scripts_path):
             from kb.framework.paths import get_default_base_path
             expected_base = get_default_base_path()
         except ImportError:
-            expected_base = Path.home() / ".openclaw" / "kb"
+            from kb.framework.paths import _get_xdg_default_base_path
+            expected_base = _get_xdg_default_base_path()
         if not str(scripts_path).startswith(str(expected_base)):
             raise ValueError(f"Refusing to delete {scripts_path}: outside expected directory")
         shutil.rmtree(scripts_path)
@@ -202,7 +204,8 @@ def download_and_install(release_info, kb_path, scripts_path):
         from kb.framework.paths import get_default_base_path
         expected_base = get_default_base_path()
     except ImportError:
-        expected_base = Path.home() / ".openclaw" / "kb"
+        from kb.framework.paths import _get_xdg_default_base_path
+        expected_base = _get_xdg_default_base_path()
     if not str(temp_dir).startswith(str(expected_base)):
         raise ValueError(f"Refusing to delete {temp_dir}: outside expected directory")
     shutil.rmtree(temp_dir)

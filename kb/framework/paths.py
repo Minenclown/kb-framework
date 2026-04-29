@@ -5,11 +5,11 @@ Centralized Path Resolution for KB Framework
 Single source of truth for default paths. All modules should
 import from here instead of defining their own fallback logic.
 
-Resolution order:
-    1. Environment variable (KB_BASE_PATH, KB_DB_PATH, etc.)
+Resolution order for base path:
+    1. Environment variable KB_BASE_PATH
     2. KBConfig singleton (if available)
     3. Package-relative detection (if kb/ is a standalone install)
-    4. OpenClaw default (~/.openclaw/kb)
+    4. XDG Data Home ($XDG_DATA_HOME/kb or ~/.local/share/kb)
 
 Usage:
     from kb.framework.paths import get_default_db_path, get_default_chroma_path
@@ -22,10 +22,24 @@ import os
 from pathlib import Path
 
 
+def _get_xdg_default_base_path() -> Path:
+    """Resolve XDG-conform default base path.
+
+    Uses XDG_DATA_HOME if set, otherwise falls back to ~/.local/share/kb.
+    This follows the XDG Base Directory Specification.
+    """
+    xdg = os.getenv("XDG_DATA_HOME")
+    if xdg:
+        return Path(xdg) / "kb"
+    return Path.home() / ".local" / "share" / "kb"
+
+
 def get_default_base_path() -> Path:
     """Resolve default KB base path.
 
-    Priority: KB_BASE_PATH env > KBConfig > package-relative > ~/.openclaw/kb
+    Priority: KB_BASE_PATH env > KBConfig > package-relative > XDG default
+
+    The XDG default is $XDG_DATA_HOME/kb (or ~/.local/share/kb).
     """
     env = os.getenv("KB_BASE_PATH")
     if env:
@@ -38,7 +52,7 @@ def get_default_base_path() -> Path:
         package_root = Path(__file__).resolve().parent.parent  # kb/framework/ -> kb/
         if (package_root / "library").exists():
             return package_root
-        return Path.home() / ".openclaw" / "kb"
+        return _get_xdg_default_base_path()
 
 
 def get_default_db_path() -> Path:

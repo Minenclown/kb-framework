@@ -50,7 +50,7 @@ class BackupCommand(BaseCommand):
             "--output", "-o",
             type=str,
             default=None,
-            help="Output directory (default: ~/.knowledge/backup/kb_backup_<timestamp>)"
+            help="Output directory (default: base_path/backup/kb_backup_<timestamp>)"
         )
     
     def validate(self, args: argparse.Namespace) -> bool:
