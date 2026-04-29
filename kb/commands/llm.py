@@ -198,8 +198,9 @@ class LLMCommand(BaseCommand):
     def _add_status_parser(self, sub):
         sub.add_parser("status", help="LLM-Status: Modell, Jobs, letzte Essenzen")
 
-    def _add_generate_parsers(self, parser: argparse.ArgumentParser):
-        gen_sub = parser.add_subparsers(dest="generate_what", help="Was generieren?")
+    def _add_generate_parsers(self, gen):
+        generate_parser = gen.add_parser("generate", help="Essenzen und Reports generieren")
+        gen_sub = generate_parser.add_subparsers(dest="generate_what", help="Was generieren?")
         self._add_essence_parser(gen_sub)
         self._add_report_parser(gen_sub)
 
@@ -228,7 +229,8 @@ class LLMCommand(BaseCommand):
         sched.add_argument("job", nargs="?", default=None, help="Job-ID für trigger")
 
     def _add_list_parsers(self, lst):
-        lst_sub = lst.add_subparsers(dest="list_what", help="Was auflisten?")
+        list_parser = lst.add_parser("list", help="Auflistungen")
+        lst_sub = list_parser.add_subparsers(dest="list_what", help="Was auflisten?")
         self._add_essences_list_parser(lst_sub)
         self._add_reports_list_parser(lst_sub)
 
@@ -248,13 +250,15 @@ class LLMCommand(BaseCommand):
         lr.add_argument("--json", action="store_true", dest="json_output", help="JSON-Ausgabe")
 
     def _add_config_parser(self, cfg):
-        cfg.add_argument("config_action", nargs="?", default="show",
+        config_parser = cfg.add_parser("config", help="Konfiguration anzeigen/ändern")
+        config_parser.add_argument("config_action", nargs="?", default="show",
                         choices=["show", "set"], help="Aktion (Standard: show)")
-        cfg.add_argument("config_key", nargs="?", default=None, help="Config-Key (für set)")
-        cfg.add_argument("config_value", nargs="?", default=None, help="Config-Value (für set)")
+        config_parser.add_argument("config_key", nargs="?", default=None, help="Config-Key (für set)")
+        config_parser.add_argument("config_value", nargs="?", default=None, help="Config-Value (für set)")
 
     def _add_engine_parsers(self, eng):
-        eng_sub = eng.add_subparsers(dest="engine_action", title="Engine-Aktionen",
+        engine_parser = eng.add_parser("engine", help="LLM Engine verwalten")
+        eng_sub = engine_parser.add_subparsers(dest="engine_action", title="Engine-Aktionen",
                                      description="Verfügbare Engine-Aktionen")
         eng_sub.add_parser("status", help="Status beider Engines und aktive model_source")
         self._add_engine_switch_parser(eng_sub)
