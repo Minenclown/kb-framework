@@ -278,11 +278,12 @@ You can verify: open the file, go to line 142, read the source.
 ## Installation
 
 ```bash
-# Clone to OpenClaw workspace
-git clone https://github.com/Minenclown/kb-framework.git ~/.openclaw/kb
+# Clone to your projects directory
+git clone https://github.com/Minenclown/kb-framework.git ~/projects/kb-framework
 
-# Or manually:
-cp -r kb-framework ~/.openclaw/kb
+# Set data directory (XDG-conform default: ~/.local/share/kb)
+export KB_BASE_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/kb"
+mkdir -p "$KB_BASE_PATH"
 
 # Install core dependencies
 pip install -r requirements.txt
@@ -298,7 +299,7 @@ pip install -r requirements-dev.txt
 
 For global CLI access, add to your `.bashrc`:
 ```bash
-alias kb="~/.openclaw/kb/kb.sh"
+alias kb="bash ~/projects/kb-framework/kb.sh"
 source ~/.bashrc
 ```
 
@@ -389,7 +390,7 @@ from kb.obsidian.parser import extract_wikilinks, extract_tags
 ## Structure
 
 ```
-~/.openclaw/kb/
+$KB_BASE_PATH/  (default: ~/.local/share/kb)
 ├── kb/                     # Core Python modules
 │   ├── commands/           # CLI commands (sync, audit, ghost, warmup)
 │   ├── obsidian/           # Obsidian integration

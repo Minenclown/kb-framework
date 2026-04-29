@@ -14,10 +14,15 @@
 git clone <repo-url> ~/projects/kb-framework
 ```
 
-### 2. Symlink erstellen
+### 2. Data Directory erstellen
 
 ```bash
-ln -s ~/projects/kb-framework ~/.openclaw/kb
+# Create data directory (XDG-conform)
+export KB_BASE_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/kb"
+mkdir -p "$KB_BASE_PATH"
+
+# Optional: Symlink for development (points repo to data dir)
+# ln -s ~/projects/kb-framework "$KB_BASE_PATH"
 ```
 
 Der Symlink sorgt dafür, dass das Repo die einzige Source of Truth ist.
@@ -26,7 +31,7 @@ Keine Kopie nötig – Änderungen am Repo sind sofort aktiv.
 ### 3. Virtual Environment erstellen
 
 ```bash
-python3 -m venv ~/.openclaw/kb/venv
+python3 -m venv ~/projects/kb-framework/venv
 ```
 
 Falls `ensurepip` nicht verfügbar (Debian/Ubuntu):
@@ -34,42 +39,42 @@ Falls `ensurepip` nicht verfügbar (Debian/Ubuntu):
 ```bash
 sudo apt install python3.12-venv
 # oder:
-python3 -m venv --without-pipe ~/.openclaw/kb/venv
-~/.openclaw/kb/venv/bin/python -m ensurepip
-# oder: curl -sS https://bootstrap.pypa.io/get-pip.py | ~/.openclaw/kb/venv/bin/python
+python3 -m venv --without-pip ~/projects/kb-framework/venv
+~/projects/kb-framework/venv/bin/python -m ensurepip
+# oder: curl -sS https://bootstrap.pypa.io/get-pip.py | ~/projects/kb-framework/venv/bin/python
 ```
 
 ### 4. Dependencies installieren
 
 ```bash
-~/.openclaw/kb/venv/bin/pip install -r ~/.openclaw/kb/requirements.txt
+~/projects/kb-framework/venv/bin/pip install -r ~/projects/kb-framework/requirements.txt
 ```
 
 Optional:
 
 ```bash
-~/.openclaw/kb/venv/bin/pip install -r ~/.openclaw/kb/requirements-transformers.txt
-~/.openclaw/kb/venv/bin/pip install -r ~/.openclaw/kb/requirements-dev.txt
+~/projects/kb-framework/venv/bin/pip install -r ~/projects/kb-framework/requirements-transformers.txt
+~/projects/kb-framework/venv/bin/pip install -r ~/projects/kb-framework/requirements-dev.txt
 ```
 
 ### 5. Konfiguration
 
 ```bash
-cp ~/.openclaw/kb/kb/config.py.template ~/.openclaw/kb/kb/config.py
+cp ~/projects/kb-framework/kb/config.py.template ~/projects/kb-framework/kb/config.py
 # config.py anpassen (Pfade, Engine-Config etc.)
 ```
 
 ### 6. Testen
 
 ```bash
-bash ~/.openclaw/kb/kb.sh --help
-bash ~/.openclaw/kb/kb.sh --version
+bash ~/projects/kb-framework/kb.sh --help
+bash ~/projects/kb-framework/kb.sh --version
 ```
 
 ## Architektur
 
 ```
-~/.openclaw/kb/              → Symlink → ~/projects/kb-framework/
+$KB_BASE_PATH/               (default: ~/.local/share/kb)
 ├── venv/                    ← Virtual Environment (nicht in Git!)
 ├── library/                 ← User Data (nicht in Git!)
 │   ├── biblio.db
@@ -94,10 +99,10 @@ bash ~/.openclaw/kb/kb.sh --version
 
 ```bash
 # Direkt
-bash ~/.openclaw/kb/kb.sh sync --stats
+bash ~/projects/kb-framework/kb.sh sync --stats
 
 # Alias in .bashrc
-alias kb='bash ~/.openclaw/kb/kb.sh'
+alias kb='bash ~/projects/kb-framework/kb.sh'
 kb sync --stats
 ```
 
@@ -109,7 +114,7 @@ Da der Symlink direkt auf das Repo zeigt:
 cd ~/projects/kb-framework
 git pull
 # Bei neuen Dependencies:
-~/.openclaw/kb/venv/bin/pip install -r requirements.txt
+~/projects/kb-framework/venv/bin/pip install -r requirements.txt
 ```
 
 ## Rollback
@@ -117,9 +122,9 @@ git pull
 Falls etwas schief geht:
 
 ```bash
-# Symlink entfernen und Backup zurückspielen
-rm ~/.openclaw/kb
-cp -r <backup-pfad> ~/.openclaw/kb
+# Backup zurückspielen
+export KB_BASE_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/kb"
+cp -r <backup-pfad> "$KB_BASE_PATH"
 ```
 
 ## .gitignore

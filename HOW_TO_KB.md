@@ -26,7 +26,7 @@ Das KB Framework ist ein semantischer Dokumentenindex mit Hybrid Search.
 ### Installation
 
 ```bash
-# Bereits installiert in ~/.openclaw/kb/
+# Bereits installiert (default: ~/.local/share/kb)
 # CLI verfügbar via:
 cd ~/projects/kb-framework && ./kb.sh --help
 
@@ -56,7 +56,7 @@ kb audit --verbose
 
 ### 3.1 Datenbank-Layer (SQLite)
 
-**Pfad:** `~/.openclaw/kb/knowledge.db`
+**Pfad:** `{base_path}/knowledge.db` (default: `~/.local/share/kb/knowledge.db`)
 
 **Kerntabellen:**
 
@@ -75,7 +75,7 @@ file_hash = md5(file.read_bytes())
 
 ### 3.2 ChromaDB-Integration
 
-**Pfad:** `~/.openclaw/kb/chroma_db/`
+**Pfad:** `{base_path}/chroma_db/` (default: `~/.local/share/kb/chroma_db/`)
 
 ```python
 # Lazy Loading beim ersten Zugriff
@@ -382,7 +382,7 @@ for r in results:
 from kb.indexer import BiblioIndexer
 from pathlib import Path
 
-indexer = BiblioIndexer("~/.openclaw/kb/knowledge.db")
+indexer = BiblioIndexer("knowledge.db")
 with indexer:
     result = indexer.index_file(Path("~/notes/meeting.md"))
     print(f"Indexed {result['sections']} sections")
@@ -488,10 +488,14 @@ config = LLMConfig(
 
 ```bash
 # Prüfe ob Verzeichnis existiert
-ls -la ~/.openclaw/kb/chroma_db/
+ls -la $KB_BASE_PATH/chroma_db/
+# or
+ls -la ~/.local/share/kb/chroma_db/
 
 # Repair permissions
-chmod 755 ~/.openclaw/kb/chroma_db/
+chmod 755 $KB_BASE_PATH/chroma_db/
+# or
+chmod 755 ~/.local/share/kb/chroma_db/
 
 # Full Re-Sync
 kb sync --full
@@ -666,7 +670,7 @@ merged = merge_essences(primary_essence, secondary_essence, diff_result=diff_res
 
 | Variable | Default | Beschreibung |
 |----------|---------|--------------|
-| `KB_BASE_PATH` | `~/.openclaw/kb` | Root |
+| `KB_BASE_PATH` | `~/.local/share/kb` | Root |
 | `KB_DB_PATH` | `{base}/knowledge.db` | SQLite |
 | `KB_CHROMA_PATH` | `{base}/chroma_db` | ChromaDB |
 | `KB_LIBRARY_PATH` | `~/knowledge/library` | Library |

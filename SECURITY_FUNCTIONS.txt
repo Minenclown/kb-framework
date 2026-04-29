@@ -66,7 +66,7 @@ CONFIGURATION & ENVIRONMENT
 1. KBConfig (kb/base/config.py)
    -----------------------------------------------------------------------------
    Environment Variables:
-   - KB_HOME: Base directory (~/.openclaw/kb/)
+   - KB_HOME: Base directory (default: $XDG_DATA_HOME/kb or ~/.local/share/kb/)
    - KB_DB_PATH: SQLite database location
    - KB_CHROMA_PATH: ChromaDB storage path
    - KB_INDEX_ROOTS: Directories to index
@@ -91,7 +91,7 @@ SAFETY GUARANTEES
 
 4. Audit Trail
    - All write operations logged via KBLogger
-   - Log location: ~/.openclaw/kb/logs/
+   - Log location: $KB_BASE_PATH/logs/ (default: ~/.local/share/kb/logs/)
 
 ================================================================================
 REVIEWED: 2026-04-15

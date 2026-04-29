@@ -3,7 +3,7 @@
 **Version:** 1.2.0  
 **Category:** Knowledge Base / Search  
 **Requires:** Python 3.9+, SQLite, ChromaDB  
-**Location:** `~/.openclaw/kb/`
+**Location:** `$KB_BASE_PATH` (default: `~/.local/share/kb`)
 
 ---
 
@@ -24,16 +24,16 @@ A complete Knowledge Base with:
 
 ### 1. Install the Skill
 ```bash
-# Clone or extract into your OpenClaw workspace
-git clone https://github.com/Minenclown/kb-framework.git ~/.openclaw/kb
+# Clone into your projects directory
+git clone https://github.com/Minenclown/kb-framework.git ~/projects/kb-framework
 
-# Or manually:
-cp -r kb-framework ~/.openclaw/kb
+# Set KB_BASE_PATH to configure data directory (default: ~/.local/share/kb)
+# export KB_BASE_PATH=~/.local/share/kb
 ```
 
 ### 2. Install Dependencies
 ```bash
-cd ~/.openclaw/kb
+cd ~/projects/kb-framework
 pip install -r requirements.txt
 
 # Optional: HuggingFace Transformers support
@@ -42,13 +42,13 @@ pip install -r requirements-transformers.txt
 
 ### 3. Initialize Database
 ```bash
-python3 ~/.openclaw/kb/kb/indexer.py --init
+python3 -m kb --init
 ```
 
 ### 4. Add CLI Alias
 ```bash
 # Add to .bashrc for global access:
-alias kb="bash ~/.openclaw/kb/kb.sh"
+alias kb="bash ~/projects/kb-framework/kb.sh"
 source ~/.bashrc
 ```
 
@@ -65,13 +65,13 @@ from kb.base.config import KBConfig
 config = KBConfig.get_instance()
 
 # Key properties:
-config.base_path        # ~/.openclaw/kb
-config.db_path          # ~/.openclaw/kb/knowledge.db
-config.library_path     # ~/.openclaw/kb/library
-config.chroma_path      # ~/.openclaw/kb/chroma_db
+config.base_path        # e.g. ~/.local/share/kb
+config.db_path          # {base_path}/knowledge.db
+config.library_path     # {base_path}/library
+config.chroma_path      # {base_path}/chroma_db
 
 # Environment variable override:
-# KB_BASE_PATH=/custom/path
+# export KB_BASE_PATH=~/.local/share/kb
 ```
 
 ### LLM Configuration (`kb/biblio/config.py`)
@@ -89,7 +89,7 @@ print(f"HF Model: {config.hf_model_name}")   # google/gemma-2-2b-it
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `KB_BASE_PATH` | `~/.openclaw/kb` | Base installation path |
+| `KB_BASE_PATH` | `~/.local/share/kb` | Base installation path |
 | `KB_LLM_MODEL_SOURCE` | `auto` | Engine: ollama/huggingface/auto/compare |
 | `KB_LLM_OLLAMA_MODEL` | `gemma4:e2b` | Ollama model name |
 | `KB_LLM_HF_MODEL` | `google/gemma-2-2b-it` | HuggingFace model |
@@ -104,12 +104,12 @@ print(f"HF Model: {config.hf_model_name}")   # google/gemma-2-2b-it
 
 ```python
 import sys
-sys.path.insert(0, "~/.openclaw/kb")
+sys.path.insert(0, "/path/to/kb-framework")
 
 # Core Indexer
 from kb.indexer import BiblioIndexer
 
-with BiblioIndexer("~/.openclaw/kb/knowledge.db") as idx:
+with BiblioIndexer("knowledge.db") as idx:
     idx.index_file("/path/to/file.md")
 
 # Hybrid Search
@@ -169,17 +169,11 @@ kb llm engine test               # Test both engines
 ### Legacy Scripts (`kb/scripts/`)
 
 ```bash
-# Index PDFs with OCR
-python3 ~/.openclaw/kb/kb/scripts/index_pdfs.py /path/to/pdfs/
-
-# Ghost Scanner (finds orphaned DB entries)
-python3 ~/.openclaw/kb/kb/scripts/kb_ghost_scanner.py
-
-# Full Audit
-python3 ~/.openclaw/kb/kb/scripts/kb_full_audit.py
-
-# ChromaDB Warmup (at boot)
-python3 ~/.openclaw/kb/kb/scripts/kb_warmup.py
+# Legacy scripts can also be called via CLI:
+kb index /path/to/pdfs/
+kb ghost
+kb audit
+kb warmup
 ```
 
 ---
@@ -187,7 +181,7 @@ python3 ~/.openclaw/kb/kb/scripts/kb_warmup.py
 ## Architecture
 
 ```
-~/.openclaw/kb/
+$KB_BASE_PATH/  (default: ~/.local/share/kb)
 ├── SKILL.md                    # This file
 ├── README.md                   # Detailed documentation
 ├── CHANGELOG.md               # Version history
@@ -415,10 +409,10 @@ from kb.base.config import KBConfig
 config = KBConfig.get_instance()
 
 # Properties
-config.base_path        # Path: ~/.openclaw/kb
-config.db_path          # Path: ~/.openclaw/kb/knowledge.db
-config.library_path     # Path: ~/.openclaw/kb/library
-config.chroma_path      # Path: ~/.openclaw/kb/chroma_db
+config.base_path        # Path: e.g. ~/.local/share/kb
+config.db_path          # Path: {base_path}/knowledge.db
+config.library_path     # Path: {base_path}/library
+config.chroma_path      # Path: {base_path}/chroma_db
 
 # Methods
 config.validate()        # Validate paths exist
@@ -504,7 +498,7 @@ results = vault.search("keyword")
 
 ### "ChromaDB slow on first start"
 ```bash
-python3 ~/.openclaw/kb/kb/scripts/kb_warmup.py
+kb warmup
 # or
 kb warmup
 ```
@@ -551,7 +545,7 @@ pkill -f "kb.*"
 ### "Config not found"
 ```python
 # Set environment variable
-export KB_BASE_PATH=~/.openclaw/kb
+export KB_BASE_PATH=~/.local/share/kb
 
 # Or programmatically
 from kb.base.config import KBConfig
@@ -564,7 +558,7 @@ config = KBConfig.reload(base_path="/path/to/kb")
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| ImportError: kb.base.config not found | Wrong base_path | Set `KB_BASE_PATH=~/.openclaw/kb` |
+| ImportError: kb.base.config not found | Wrong base_path | Set `KB_BASE_PATH` or check path |
 | ChromaDB timeout | Model not warmed up | Run `kb warmup` first |
 | No search results | Empty index or sync needed | `kb sync` then `kb audit` |
 | Ghost entries found | Files moved/deleted | `kb sync --delete-orphans` |

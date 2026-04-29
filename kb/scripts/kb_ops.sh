@@ -13,7 +13,7 @@ esac
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KB_DIR="${HOME}/.openclaw/kb"
+KB_DIR="${KB_BASE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/kb}"
 BACKUP_DIR="${KB_DIR}/backup"
 DB_PATH="${KB_DIR}/library/biblio.db"
 CHROMA_PATH="${KB_DIR}/library/chroma_db"
