@@ -101,7 +101,15 @@ class KBConnection:
                     if not pragma.replace('_', '').isalnum():
                         raise KBConnectionError(f"Invalid pragma name: {pragma}")
                     # Validate value: must be int or a known safe string
-                    if not isinstance(value, int) and not (isinstance(value, str) and value.lstrip('-').isdigit()):
+                    if isinstance(value, int) or (isinstance(value, str) and value.lstrip('-').isdigit()):
+                        pass  # Numeric value is safe
+                    elif pragma == "journal_mode" and value in ("WAL", "DELETE", "TRUNCATE", "MEMORY", "OFF"):
+                        pass  # Known-safe journal modes
+                    elif pragma in ("synchronous", "temp_store") and value in ("OFF", "NORMAL", "FULL", "EXTRA", "DEFAULT", "FILE", "MEMORY"):
+                        pass  # Known-safe modes for these pragmas
+                    elif pragma == "foreign_keys" and value in ("ON", "OFF"):
+                        pass  # Known-safe foreign key settings
+                    else:
                         raise KBConnectionError(f"Invalid pragma value for {pragma}: {value!r}")
                     # f-string removed: PRAGMA cannot be parameterized,
                     # validated inputs are safe to interpolate.

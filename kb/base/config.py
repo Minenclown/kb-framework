@@ -97,7 +97,7 @@ class KBConfig:
             return package_root
         
         # OpenClaw-managed installation default
-        return get_default_base_path()
+        return Path.home() / ".openclaw" / "kb"
     
     def _validate(self) -> None:
         """Validate configuration paths. Fails fast on critical issues."""
